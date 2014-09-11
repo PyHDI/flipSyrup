@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+
+<!DOCTYPE doc SYSTEM "../../ipdialog.dtd" [
+	<!-- -->
+
+	<!ENTITY C_M_AXI_SUPPORTS_THREADS '
+	<widget id="C_M_AXI_SUPPORTS_THREADS">
+		<key>C_M_AXI_SUPPORTS_THREADS</key>
+		<label>C_M_AXI_SUPPORTS_THREADS</label>
+		<tip></tip>
+	</widget>
+	'>
+	<!ENTITY C_M_AXI_THREAD_ID_WIDTH '
+	<widget id="C_M_AXI_THREAD_ID_WIDTH">
+		<key>C_M_AXI_THREAD_ID_WIDTH</key>
+		<label>C_M_AXI_THREAD_ID_WIDTH</label>
+		<tip></tip>
+	</widget>
+	'>
+	<!ENTITY C_M_AXI_ADDR_WIDTH '
+	<widget id="C_M_AXI_ADDR_WIDTH">
+		<key>C_M_AXI_ADDR_WIDTH</key>
+		<label>C_M_AXI_ADDR_WIDTH</label>
+		<tip></tip>
+	</widget>
+	'>
+	<!ENTITY C_M_AXI_DATA_WIDTH '
+	<widget id="C_M_AXI_DATA_WIDTH">
+		<key>C_M_AXI_DATA_WIDTH</key>
+		<label>C_M_AXI_DATA_WIDTH</label>
+		<tip></tip>
+	</widget>
+	'>
+	<!ENTITY C_M_AXI_PROTOCOL '
+	<widget id="C_M_AXI_PROTOCOL">
+		<key>C_M_AXI_PROTOCOL</key>
+		<label>C_M_AXI_PROTOCOL</label>
+		<tip></tip>
+	</widget>
+	'>
+	<!ENTITY C_USE_ADVANCED_PORTS '
+	<widget id="C_USE_ADVANCED_PORTS">
+		<key>C_USE_ADVANCED_PORTS</key>
+		<label>C_USE_ADVANCED_PORTS</label>
+		<tip></tip>
+	</widget>
+	'>
+	<!ENTITY C_M_AXI_SUPPORTS_READ '
+	<widget id="C_M_AXI_SUPPORTS_READ">
+		<key>C_M_AXI_SUPPORTS_READ</key>
+		<label>C_M_AXI_SUPPORTS_READ</label>
+		<tip></tip>
+	</widget>
+	'>
+	<!ENTITY C_M_AXI_SUPPORTS_WRITE '
+	<widget id="C_M_AXI_SUPPORTS_WRITE">
+		<key>C_M_AXI_SUPPORTS_WRITE</key>
+		<label>C_M_AXI_SUPPORTS_WRITE</label>
+		<tip></tip>
+	</widget>
+	'>
+	<!ENTITY C_M_AXI_SUPPORTS_USER_SIGNALS '
+	<widget id="C_M_AXI_SUPPORTS_USER_SIGNALS">
+		<key>C_M_AXI_SUPPORTS_USER_SIGNALS</key>
+		<label>C_M_AXI_SUPPORTS_USER_SIGNALS</label>
+		<tip></tip>
+	</widget>
+	'>
+	<!ENTITY C_M_AXI_AWUSER_WIDTH '
+	<widget id="C_M_AXI_AWUSER_WIDTH">
+		<key>C_M_AXI_AWUSER_WIDTH</key>
+		<label>C_M_AXI_AWUSER_WIDTH</label>
+		<tip></tip>
+	</widget>
+	'>
+	<!ENTITY C_M_AXI_ARUSER_WIDTH '
+	<widget id=" C_M_AXI_ARUSER_WIDTH ">
+		<key>C_M_AXI_ARUSER_WIDTH</key>
+		<label>C_M_AXI_ARUSER_WIDTH</label>
+		<tip></tip>
+	</widget>
+	'>
+	<!ENTITY C_M_AXI_WUSER_WIDTH '
+	<widget id="C_M_AXI_WUSER_WIDTH">
+		<key>C_M_AXI_WUSER_WIDTH</key>
+		<label>C_M_AXI_WUSER_WIDTH</label>
+		<tip></tip>
+	</widget>
+	'>
+	<!ENTITY C_M_AXI_RUSER_WIDTH '
+	<widget id="C_M_AXI_RUSER_WIDTH">
+		<key>C_M_AXI_RUSER_WIDTH</key>
+		<label>C_M_AXI_RUSER_WIDTH</label>
+		<tip></tip>
+	</widget>
+	'>
+	<!ENTITY C_M_AXI_BUSER_WIDTH '
+	<widget id="C_M_AXI_BUSER_WIDTH">
+		<key>C_M_AXI_BUSER_WIDTH</key>
+		<label>C_M_AXI_BUSER_WIDTH</label>
+		<tip></tip>
+	</widget>
+	'>
+	<!ENTITY C_M_AXI_SUPPORTS_NARROW_BURST '
+	<widget id="C_M_AXI_SUPPORTS_NARROW_BURST">
+		<key>C_M_AXI_SUPPORTS_NARROW_BURST</key>
+		<label>C_M_AXI_SUPPORTS_NARROW_BURST</label>
+		<tip></tip>
+	</widget>
+	'>
+
+]>
+
+<doc>
+	<view id="User">
+		<display>User</display>
+		<group id="Common">
+			<display>Common</display>
+
+{%- for param in mpd_parameters %}
+	<!--
+			<item>&{{ param[0] }};</item>
+  -->
+{%- endfor %}
+
+	<!--
+			<item>&C_M_AXI_PROTOCOL;</item>
+  -->
+
+		</group>
+	</view>
+	<view id="System">
+		<display>System</display>
+		<group id="AXI">
+			<display>AXI</display>
+
+	<!--
+			<item>&C_M_AXI_ADDR_WIDTH;</item>
+			<item>&C_M_AXI_DATA_WIDTH;</item>
+			<item>&C_M_AXI_SUPPORTS_READ;</item>
+			<item>&C_M_AXI_SUPPORTS_WRITE;</item>
+			<item>&C_M_AXI_SUPPORTS_THREADS;</item>
+			<item>&C_M_AXI_THREAD_ID_WIDTH;</item>
+			<item>&C_M_AXI_SUPPORTS_NARROW_BURST;</item>
+			<item>&C_M_AXI_SUPPORTS_USER_SIGNALS;</item>
+			<item>&C_M_AXI_AWUSER_WIDTH;</item>
+			<item>&C_M_AXI_ARUSER_WIDTH;</item>
+			<item>&C_M_AXI_WUSER_WIDTH;</item>
+			<item>&C_M_AXI_RUSER_WIDTH;</item>
+			<item>&C_M_AXI_BUSER_WIDTH;</item>
+  -->
+
+		</group>
+	</view>
+	
+</doc>

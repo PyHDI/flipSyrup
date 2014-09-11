@@ -1,0 +1,417 @@
+module SYRUP_CHANNELSYSTEM #
+  (
+   parameter FIFO_ADDR_LEN = 4,
+   parameter ASYNC = 1
+   )
+  (
+   input CLK,
+   input RST,
+{%- for domain in domains | sort(attribute='name') %}
+   //----------------------------------------------------------------------------
+   // Domain {{ domain.name }}
+   //----------------------------------------------------------------------------
+   // User-logic
+{%- for outchannel in domain.outchannels | sort(attribute='name') %}
+   input [{{ outchannel.datawidth -1 }}:0] {{ outchannel.name }}_d,
+   input {{ outchannel.name }}_we,
+{%- endfor %}
+{%- for inchannel in domain.inchannels | sort(attribute='name') %}
+   output [{{ inchannel.datawidth -1 }}:0] {{ inchannel.name }}_q,
+   input {{ inchannel.name }}_re,
+{%- endfor %}
+
+   // External 
+{%- for outchannel in domain.outchannels | sort(attribute='name') %}
+   output [{{ outchannel.datawidth -1 }}:0] {{ outchannel.name }}_ext_data_out,
+   output {{ outchannel.name }}_ext_enq_out,
+   input {{ outchannel.name }}_ext_ready_in,
+{%- endfor %}
+{%- for inchannel in domain.inchannels | sort(attribute='name') %}
+   input {{ inchannel.name }}_ext_clk,
+   input {{ inchannel.name }}_ext_rst,
+   input [{{ inchannel.datawidth -1 }}:0] {{ inchannel.name }}_ext_data_in,
+   input {{ inchannel.name }}_ext_enq_in,
+   output {{ inchannel.name }}_ext_ready_out,
+{%- endfor %}
+
+   input {{ domain.name }}_slave_drive_in,
+   output {{ domain.name }}_slave_drive_out,
+   input {{ domain.name }}_master_drive_in,
+   output {{ domain.name }}_master_drive_out,
+   output {{ domain.name }}_DRIVE{%- if loop.index < numdomains %}, {%- endif %}
+{%- endfor %}
+   );
+
+{%- for domain in domains | sort(attribute='name') %}
+  //----------------------------------------------------------------------------
+  // write data to neighbor FIFO
+  //----------------------------------------------------------------------------
+{%- for outchannel in domain.outchannels | sort(attribute='name') %}
+  reg access_write_wait_{{ domain.name }}_{{ outchannel.name }};
+  reg access_write_done_{{ domain.name }}_{{ outchannel.name }};
+  reg [{{ outchannel.datawidth -1 }}:0] access_write_data_{{ domain.name }}_{{ outchannel.name }};
+  reg d_{{ outchannel.name }}_ext_enq_out;
+
+  always @(posedge CLK) begin
+    if(RST) begin
+      access_write_wait_{{ domain.name }}_{{ outchannel.name }} <= 0;
+      access_write_done_{{ domain.name }}_{{ outchannel.name }} <= 0;
+      access_write_data_{{ domain.name }}_{{ outchannel.name }} <= 0;
+      d_{{ outchannel.name }}_ext_enq_out <= 0;
+    end else begin
+      d_{{ outchannel.name }}_ext_enq_out <= {{ outchannel.name }}_ext_enq_out;
+      if({{ domain.name }}_DRIVE) begin
+        access_write_wait_{{ domain.name }}_{{ outchannel.name }} <= {{ outchannel.name }}_we;
+        access_write_done_{{ domain.name }}_{{ outchannel.name }} <= 0;
+        access_write_data_{{ domain.name }}_{{ outchannel.name }} <= {{ outchannel.name }}_d;
+      end else if({{ outchannel.name }}_ext_enq_out) begin
+        access_write_wait_{{ domain.name }}_{{ outchannel.name }} <= 0;
+      end
+      if({{ outchannel.name }}_ext_enq_out) begin
+        access_write_done_{{ domain.name }}_{{ outchannel.name }} <= 1;
+      end
+    end
+  end
+{%- endfor %}
+
+  //----------------------------------------------------------------------------
+  // read data from receive FIFO
+  //----------------------------------------------------------------------------
+{%- for inchannel in domain.inchannels | sort(attribute='name') %}
+  reg access_read_wait_{{ domain.name }}_{{ inchannel.name }};
+  reg access_read_done_{{ domain.name }}_{{ inchannel.name }};
+  reg [{{ inchannel.datawidth -1 }}:0] access_read_data_{{ domain.name }}_{{ inchannel.name }};
+
+  wire [{{ inchannel.datawidth -1 }}:0] {{ inchannel.name }}_fifo_q;
+  wire {{ inchannel.name }}_fifo_re;
+  wire {{ inchannel.name }}_fifo_ready;
+  reg d_{{ inchannel.name }}_fifo_re;
+
+  always @(posedge CLK) begin
+    if(RST) begin
+      access_read_done_{{ domain.name }}_{{ inchannel.name }} <= 0;
+      access_read_wait_{{ domain.name }}_{{ inchannel.name }} <= 0;
+      access_read_data_{{ domain.name }}_{{ inchannel.name }} <= 0;
+      d_{{ inchannel.name }}_fifo_re <= 0;
+    end else begin
+      d_{{ inchannel.name }}_fifo_re <= {{ inchannel.name }}_fifo_re;
+      if({{ domain.name }}_DRIVE) begin
+        access_read_wait_{{ domain.name }}_{{ inchannel.name }} <= {{ inchannel.name }}_re;
+        access_read_done_{{ domain.name }}_{{ inchannel.name }} <= 0;
+      end else if(d_{{ inchannel.name }}_fifo_re) begin
+        access_read_wait_{{ domain.name }}_{{ inchannel.name }} <= 0;
+        access_read_done_{{ domain.name }}_{{ inchannel.name }} <= 1;
+      end
+      if(d_{{ inchannel.name }}_fifo_re) begin
+        access_read_data_{{ domain.name }}_{{ inchannel.name }} <= {{ inchannel.name }}_fifo_q;
+      end
+    end
+  end
+
+  wire {{ inchannel.name }}_fifo_empty;
+  wire {{ inchannel.name }}_ext_alm_full;
+
+  assign {{ inchannel.name }}_fifo_ready = !{{ inchannel.name }}_fifo_empty;
+  assign {{ inchannel.name }}_ext_ready_out = !{{ inchannel.name }}_ext_alm_full;
+
+  channel_fifo #
+   (
+    .ADDR_LEN(FIFO_ADDR_LEN),
+    .DATA_WIDTH({{ inchannel.datawidth }}),
+    .ASYNC(ASYNC)
+    )
+  inst_channel_fifo_{{ inchannel.name }}
+   (
+    .CLK0(CLK),
+    .RST0(RST),
+    .Q({{ inchannel.name }}_fifo_q),
+    .DEQ({{ inchannel.name }}_fifo_re),
+    .EMPTY({{ inchannel.name }}_fifo_empty),
+    .ALM_EMPTY(),
+
+    .CLK1({{ inchannel.name }}_ext_clk),
+    .RST1({{ inchannel.name }}_ext_rst),
+    .D({{ inchannel.name }}_ext_data_in),
+    .ENQ({{ inchannel.name }}_ext_enq_in),
+    .FULL(),
+    .ALM_FULL({{ inchannel.name }}_ext_alm_full)
+    );
+
+{%- endfor %}
+
+{%- endfor %}
+
+
+{%- for domain in domains | sort(attribute='name') %}
+
+{%- for outchannel in domain.outchannels | sort(attribute='name') %}
+  wire {{ outchannel.name }}_ext_enq_out_cand;
+  assign {{ outchannel.name }}_ext_enq_out_cand = ({{ domain.name }}_DRIVE)? {{ outchannel.name }}_we :
+                                              access_write_wait_{{ domain.name }}_{{ outchannel.name }} && !access_write_done_{{ domain.name }}_{{ outchannel.name }};
+  assign {{ outchannel.name }}_ext_enq_out = {{ outchannel.name }}_ext_enq_out_cand && {{ outchannel.name }}_ext_ready_in;
+  assign {{ outchannel.name }}_ext_data_out = ({{ domain.name }}_DRIVE)? {{ outchannel.name }}_d : access_write_data_{{ domain.name }}_{{ outchannel.name }};
+{%- endfor %}
+
+{%- for inchannel in domain.inchannels | sort(attribute='name') %}
+  wire {{ inchannel.name }}_fifo_re_cand;
+  assign {{ inchannel.name }}_fifo_re_cand = ({{ domain.name }}_DRIVE)? {{ inchannel.name }}_re :
+                                             access_read_wait_{{ domain.name }}_{{ inchannel.name }} && !access_read_done_{{ domain.name }}_{{ inchannel.name }};
+  assign {{ inchannel.name }}_fifo_re = {{ inchannel.name }}_fifo_re_cand && {{ inchannel.name }}_fifo_ready;
+  assign {{ inchannel.name }}_q = (access_read_done_{{ domain.name }}_{{ inchannel.name }})? access_read_data_{{ domain.name }}_{{ inchannel.name }} : {{ inchannel.name }}_fifo_q;
+{%- endfor %}
+
+{%- endfor %}
+
+{%- for domain in domains | sort(attribute='name') %}
+  wire next_ready_{{ domain.name }};
+
+  assign next_ready_{{ domain.name }} =
+{%- for outchannel in domain.outchannels | sort(attribute='name') %}
+    (!access_write_wait_{{ domain.name }}_{{ outchannel.name }} ||
+     access_write_done_{{ domain.name }}_{{ outchannel.name }} ||
+     d_{{ outchannel.name }}_ext_enq_out) &&
+{%- endfor %}
+{%- for inchannel in domain.inchannels | sort(attribute='name') %}
+    (!access_read_wait_{{ domain.name }}_{{ inchannel.name }} ||
+     access_read_done_{{ domain.name }}_{{ inchannel.name }} ||
+     d_{{ inchannel.name }}_fifo_re) &&
+{%- endfor %}
+    1'b1;
+
+  assign {{ domain.name }}_slave_drive_out = next_ready_{{ domain.name }} && {{ domain.name }}_master_drive_in;  
+  assign {{ domain.name }}_master_drive_out = next_ready_{{ domain.name }} && {{ domain.name }}_slave_drive_in;
+  assign {{ domain.name }}_DRIVE = next_ready_{{ domain.name }} && {{ domain.name }}_master_drive_in && {{ domain.name }}_slave_drive_in;
+{%- endfor %}    
+
+endmodule
+
+module channel_fifo(CLK0, RST0, Q, DEQ, EMPTY, ALM_EMPTY,
+                    CLK1, RST1, D, ENQ,  FULL,  ALM_FULL);
+  parameter ADDR_LEN = 10;
+  parameter DATA_WIDTH = 32;
+  parameter ASYNC = 1;
+  localparam MEM_SIZE = 2 ** ADDR_LEN;
+
+  input                   CLK0;
+  input                   RST0;
+  output [DATA_WIDTH-1:0] Q;
+  input                   DEQ;
+  output                  EMPTY;
+  output                  ALM_EMPTY;
+  
+  input                   CLK1;
+  input                   RST1;
+  input  [DATA_WIDTH-1:0] D;
+  input                   ENQ;
+  output                  FULL;
+  output                  ALM_FULL;
+
+  reg EMPTY;
+  reg ALM_EMPTY;
+  reg FULL;
+  reg ALM_FULL;
+
+  reg [ADDR_LEN-1:0] head;
+  reg [ADDR_LEN-1:0] tail;
+
+  reg [ADDR_LEN-1:0] gray_head_cdc_from;
+  reg [ADDR_LEN-1:0] gray_tail_cdc_from;
+
+  reg [ADDR_LEN-1:0] d_gray_head_cdc_to;
+  reg [ADDR_LEN-1:0] d_gray_tail_cdc_to;
+
+  reg [ADDR_LEN-1:0] dd_gray_head;
+  reg [ADDR_LEN-1:0] dd_gray_tail;
+
+  wire ram_we;
+  assign ram_we = ENQ && !FULL;
+
+  function [ADDR_LEN-1:0] to_gray;
+    input [ADDR_LEN-1:0] in;
+    to_gray = in ^ (in >> 1);
+  endfunction
+
+  function [ADDR_LEN-1:0] mask;
+    input [ADDR_LEN-1:0] in;
+    mask = in[ADDR_LEN-1:0];
+  endfunction
+  
+  generate if(ASYNC) begin
+    // Read Pointer
+    always @(posedge CLK0) begin
+      if(RST0) begin
+        head <= 0;
+        gray_head_cdc_from <= 0;
+      end else begin
+        if(!EMPTY && DEQ) head <= head == (MEM_SIZE-1)? 0 : head + 1;
+        if(!EMPTY && DEQ) gray_head_cdc_from <= head == (MEM_SIZE-1)? to_gray(0) : to_gray(head + 1);
+      end
+    end
+  
+    // Write Pointer
+    always @(posedge CLK1) begin
+      if(RST1) begin
+        tail <= 0;
+        gray_tail_cdc_from <= 0;
+      end else begin
+        if(!FULL && ENQ) tail <= tail == (MEM_SIZE-1)? 0 : tail + 1;
+        if(!FULL && ENQ) gray_tail_cdc_from <= tail == (MEM_SIZE-1)? to_gray(0) : to_gray(tail + 1);
+      end
+    end
+
+    // Read Pointer (CLK0 -> CLK1)
+    always @(posedge CLK1) begin
+      d_gray_head_cdc_to <= gray_head_cdc_from;
+      dd_gray_head <= d_gray_head_cdc_to;
+    end
+    
+    // Write Pointer (CLK1 -> CLK0)
+    always @(posedge CLK0) begin
+      d_gray_tail_cdc_to <= gray_tail_cdc_from;
+      dd_gray_tail <= d_gray_tail_cdc_to;
+    end
+
+    always @(posedge CLK0) begin
+      if(RST0) begin
+        EMPTY <= 1'b1;
+        ALM_EMPTY <= 1'b1;
+      end else begin
+        if(DEQ && !EMPTY) begin
+          EMPTY <= (dd_gray_tail == to_gray(head+1));
+          ALM_EMPTY <= (dd_gray_tail == to_gray(head+2)) || (dd_gray_tail == to_gray(head+1));
+        end else begin
+          EMPTY <= (dd_gray_tail == to_gray(head));
+          ALM_EMPTY <= (dd_gray_tail == to_gray(head+1)) || (dd_gray_tail == to_gray(head));
+        end
+      end
+    end
+
+    always @(posedge CLK1) begin
+      if(RST1) begin
+        FULL <= 1'b0;
+        ALM_FULL <= 1'b0;
+      end else begin
+        if(ENQ && !FULL) begin
+          FULL <= (dd_gray_head == to_gray(tail+2));
+          ALM_FULL <= (dd_gray_head == to_gray(tail+3)) || (dd_gray_head == to_gray(tail+2));
+        end else begin
+          FULL <= (dd_gray_head == to_gray(tail+1));
+          ALM_FULL <= (dd_gray_head == to_gray(tail+2)) || (dd_gray_head == to_gray(tail+1));
+        end
+      end
+    end
+
+    channel_fifo_ram #(.W_A(ADDR_LEN), .W_D(DATA_WIDTH))
+    ram (.CLK0(CLK0), .ADDR0(head), .D0('h0), .WE0(1'b0), .Q0(Q), // read
+         .CLK1(CLK1), .ADDR1(tail), .D1(D), .WE1(ram_we), .Q1()); // write
+
+  end else begin
+
+    // Read Pointer
+    always @(posedge CLK0) begin
+      if(RST0) begin
+        head <= 0;
+      end else begin
+        if(!EMPTY && DEQ) head <= head == (MEM_SIZE-1)? 0 : head + 1;
+      end
+    end
+  
+    // Write Pointer
+    always @(posedge CLK0) begin
+      if(RST0) begin
+        tail <= 0;
+      end else begin
+        if(!FULL && ENQ) tail <= tail == (MEM_SIZE-1)? 0 : tail + 1;
+      end
+    end
+
+    always @(posedge CLK0) begin
+      if(RST0) begin
+        EMPTY <= 1'b1;
+        ALM_EMPTY <= 1'b1;
+      end else begin
+        if(DEQ && !EMPTY) begin
+          if(ENQ && !FULL) begin
+            EMPTY <= (mask(tail+1) == mask(head+1));
+            ALM_EMPTY <= (mask(tail+1) == mask(head+2)) || (mask(tail+1) == mask(head+1));
+          end else begin
+            EMPTY <= (tail == mask(head+1));
+            ALM_EMPTY <= (tail == mask(head+2)) || (tail == mask(head+1));
+          end
+        end else begin
+          if(ENQ && !FULL) begin
+            EMPTY <= (mask(tail+1) == mask(head));
+            ALM_EMPTY <= (mask(tail+1) == mask(head+1)) || (mask(tail+1) == mask(head));
+          end else begin
+            EMPTY <= (tail == mask(head));
+            ALM_EMPTY <= (tail == mask(head+1)) || (tail == mask(head));
+          end
+        end
+      end
+    end
+
+    always @(posedge CLK0) begin
+      if(RST0) begin
+        FULL <= 1'b0;
+        ALM_FULL <= 1'b0;
+      end else begin
+        if(ENQ && !FULL) begin
+          if(DEQ && !EMPTY) begin
+            FULL <= (mask(head+1) == mask(tail+2));
+            ALM_FULL <= (mask(head+1) == mask(tail+3)) || (mask(head+1) == mask(tail+2));
+          end else begin
+            FULL <= (head == mask(tail+2));
+            ALM_FULL <= (head == mask(tail+3)) || (head == mask(tail+2));
+          end
+        end else begin
+          if(DEQ && !EMPTY) begin
+            FULL <= (mask(head+1) == mask(tail+1));
+            ALM_FULL <= (mask(head+1) == mask(tail+2)) || (mask(head+1) == mask(tail+1));
+          end else begin
+            FULL <= (head == mask(tail+1));
+            ALM_FULL <= (head == mask(tail+2)) || (head == mask(tail+1));
+          end
+        end
+      end
+    end
+
+    channel_fifo_ram #(.W_A(ADDR_LEN), .W_D(DATA_WIDTH))
+    ram (.CLK0(CLK0), .ADDR0(head), .D0('h0), .WE0(1'b0), .Q0(Q), // read
+         .CLK1(CLK0), .ADDR1(tail), .D1(D), .WE1(ram_we), .Q1()); // write
+
+  end endgenerate
+
+endmodule
+
+module channel_fifo_ram(CLK0, ADDR0, D0, WE0, Q0,
+                        CLK1, ADDR1, D1, WE1, Q1);
+  parameter W_A = 10;
+  parameter W_D = 32;
+  localparam LEN = 2 ** W_A;
+  input            CLK0;
+  input  [W_A-1:0] ADDR0;
+  input  [W_D-1:0] D0;
+  input            WE0;
+  output [W_D-1:0] Q0;
+  input            CLK1;
+  input  [W_A-1:0] ADDR1;
+  input  [W_D-1:0] D1;
+  input            WE1;
+  output [W_D-1:0] Q1;
+  
+  reg [W_A-1:0] d_ADDR0;
+  reg [W_A-1:0] d_ADDR1;
+  reg [W_D-1:0] mem [0:LEN-1];
+  
+  always @(posedge CLK0) begin
+    if(WE0) mem[ADDR0] <= D0;
+    d_ADDR0 <= ADDR0;
+  end
+  always @(posedge CLK1) begin
+    if(WE1) mem[ADDR1] <= D1;
+    d_ADDR1 <= ADDR1;
+  end
+  assign Q0 = mem[d_ADDR0];
+  assign Q1 = mem[d_ADDR1];
+endmodule
+

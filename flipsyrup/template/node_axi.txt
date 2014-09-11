@@ -1,0 +1,440 @@
+//`define ENABLE_PERFORMANCECOUNTER
+
+module syrup_{{ userlogic_name.lower() }} #
+  (
+   //---------------------------------------------------------------------------
+   // User-defined parameter in Top-level User logic
+   // DO NOT modify. They are NOT passed through to the instance
+   //---------------------------------------------------------------------------
+{%- for param in def_top_parameters %}
+   {{ param }}
+{%- endfor %}
+
+  //---------------------------------------------------------------------------
+   // parameters
+   //---------------------------------------------------------------------------
+   parameter W_EXT_D = {{ ext_datawidth }},
+   parameter W_EXT_A = {{ ext_addrwidth }},
+   //parameter W_BLEN = {{ ext_burstlen_width }},
+   //parameter MAX_BURST_LEN = {{ ext_burstlength }},
+
+   //----------------------------------------------------------------------------
+   // AXI Parameter
+   //----------------------------------------------------------------------------
+   parameter integer C_M_AXI_DATA_WIDTH            = {{ ext_datawidth }},
+   parameter integer C_M_AXI_THREAD_ID_WIDTH       = 1,
+   parameter integer C_M_AXI_ADDR_WIDTH            = {{ ext_addrwidth }},
+   parameter integer C_M_AXI_AWUSER_WIDTH          = 1,
+   parameter integer C_M_AXI_ARUSER_WIDTH          = 1,
+   parameter integer C_M_AXI_WUSER_WIDTH           = 1,
+   parameter integer C_M_AXI_RUSER_WIDTH           = 1,
+   parameter integer C_M_AXI_BUSER_WIDTH           = 1,
+   parameter integer C_M_AXI_SUPPORTS_WRITE        = 1,
+   parameter integer C_M_AXI_SUPPORTS_READ         = 1,
+
+   // Base address of targeted slave DRAM
+   parameter C_M_AXI_TARGET = 'h00000000
+   )
+  (
+   //----------------------------------------------------------------------------
+   // AXI Master Interface (Syrup Memory)
+   //----------------------------------------------------------------------------
+   // Clock and Reset
+   input                                     M_AXI_ACLK,
+   input                                     M_AXI_ARESETN,
+
+   // Master Interface Write Address
+   output wire [C_M_AXI_THREAD_ID_WIDTH-1:0] M_AXI_AWID,
+   output wire [C_M_AXI_ADDR_WIDTH-1:0]      M_AXI_AWADDR,
+   output wire [8-1:0]                       M_AXI_AWLEN,
+   output wire [3-1:0]                       M_AXI_AWSIZE,
+   output wire [2-1:0]                       M_AXI_AWBURST,
+   output wire                               M_AXI_AWLOCK,
+   output wire [4-1:0]                       M_AXI_AWCACHE,
+   output wire [3-1:0]                       M_AXI_AWPROT,
+   output wire [4-1:0]                       M_AXI_AWQOS,
+   output wire [C_M_AXI_AWUSER_WIDTH-1:0]    M_AXI_AWUSER,
+   output wire                               M_AXI_AWVALID,
+   input  wire                               M_AXI_AWREADY,
+   
+   // Master Interface Write Data
+   output wire [C_M_AXI_DATA_WIDTH-1:0]      M_AXI_WDATA,
+   output wire [C_M_AXI_DATA_WIDTH/8-1:0]    M_AXI_WSTRB,
+   output wire                               M_AXI_WLAST,
+   output wire [C_M_AXI_WUSER_WIDTH-1:0]     M_AXI_WUSER,
+   output wire                               M_AXI_WVALID,
+   input  wire                               M_AXI_WREADY,
+   
+   // Master Interface Write Response
+   input  wire [C_M_AXI_THREAD_ID_WIDTH-1:0] M_AXI_BID,
+   input  wire [2-1:0]                       M_AXI_BRESP,
+   input  wire [C_M_AXI_BUSER_WIDTH-1:0]     M_AXI_BUSER,
+   input  wire                               M_AXI_BVALID,
+   output wire                               M_AXI_BREADY,
+   
+   // Master Interface Read Address
+   output wire [C_M_AXI_THREAD_ID_WIDTH-1:0] M_AXI_ARID,
+   output wire [C_M_AXI_ADDR_WIDTH-1:0]      M_AXI_ARADDR,
+   output wire [8-1:0]                       M_AXI_ARLEN,
+   output wire [3-1:0]                       M_AXI_ARSIZE,
+   output wire [2-1:0]                       M_AXI_ARBURST,
+   output wire [2-1:0]                       M_AXI_ARLOCK,
+   output wire [4-1:0]                       M_AXI_ARCACHE,
+   output wire [3-1:0]                       M_AXI_ARPROT,
+   output wire [4-1:0]                       M_AXI_ARQOS,
+   output wire [C_M_AXI_ARUSER_WIDTH-1:0]    M_AXI_ARUSER,
+   output wire                               M_AXI_ARVALID,
+   input  wire                               M_AXI_ARREADY,
+   
+   // Master Interface Read Data 
+   input  wire [C_M_AXI_THREAD_ID_WIDTH-1:0] M_AXI_RID,
+   input  wire [C_M_AXI_DATA_WIDTH-1:0]      M_AXI_RDATA,
+   input  wire [2-1:0]                       M_AXI_RRESP,
+   input  wire                               M_AXI_RLAST,
+   input  wire [C_M_AXI_RUSER_WIDTH-1:0]     M_AXI_RUSER,
+   input  wire                               M_AXI_RVALID,
+   output wire                               M_AXI_RREADY,
+
+   //---------------------------------------------------------------------------
+   // Performance Counter
+   //---------------------------------------------------------------------------
+{%- for domain in domains | sort(attribute='name') %}
+{%- for space in domain.spaces | sort() %}
+   output wire [63:0] {{ domain.name }}_{{ space }}_cycle_idle,
+   output wire [63:0] {{ domain.name }}_{{ space }}_cycle_hit,
+   output wire [63:0] {{ domain.name }}_{{ space }}_cycle_miss,
+   output wire [63:0] {{ domain.name }}_{{ space }}_cycle_conflict,
+   output wire [63:0] {{ domain.name }}_{{ space }}_cycle_wait,
+   output wire [63:0] {{ domain.name }}_{{ space }}_num_miss,
+{%- endfor %}
+{%- endfor %}
+
+   input  wire reset_performance_count,
+
+   //---------------------------------------------------------------------------
+   // Syrup Channel
+   //---------------------------------------------------------------------------
+{%- for domain in domains | sort(attribute='name') %}
+{%- for outchannel in domain.outchannels | sort(attribute='name') %}
+   output wire [{{ outchannel.datawidth -1 }}:0] {{ outchannel.name }}_outchannel_data_out,
+   output wire {{ outchannel.name }}_outchannel_enq_out,
+   input wire {{ outchannel.name }}_outchannel_ready_in,
+{%- endfor %}
+{%- for inchannel in domain.inchannels | sort(attribute='name') %}
+   input wire {{ inchannel.name }}_inchannel_clk,
+   input wire {{ inchannel.name }}_inchannel_rst,
+   input wire [{{ inchannel.datawidth -1 }}:0] {{ inchannel.name }}_inchannel_data_in,
+   input wire {{ inchannel.name }}_inchannel_enq_in,
+   output wire {{ inchannel.name }}_inchannel_ready_out,
+{%- endfor %}
+{%- endfor %}
+
+   //---------------------------------------------------------------------------
+   // User-defined I/O ports in Top-level User logic
+   //---------------------------------------------------------------------------
+{%- for ioport in def_top_ioports | sort() %}
+   {{ ioport }},
+{%- endfor %}
+
+   //----------------------------------------------------------------------------
+   // User-logic Clock and Reset
+   //----------------------------------------------------------------------------
+   input wire UCLK,
+   input wire URESETN
+   );
+
+  //---------------------------------------------------------------------------
+  // User-defined localparam in Top-level User logic
+  //---------------------------------------------------------------------------
+{%- for param in def_top_localparams %}
+  {{ param }}
+{%- endfor %}
+
+  //---------------------------------------------------------------------------
+  // User Reset
+  //---------------------------------------------------------------------------
+  reg URST_r;
+  reg URST_rr;
+  reg URST;
+
+  always @(posedge UCLK) begin
+    URST_r <= !URESETN;  
+    URST_rr <= URST_r;
+    URST <= URST_rr;
+  end
+
+  //---------------------------------------------------------------------------
+  // AXI Reset
+  //---------------------------------------------------------------------------
+  reg M_AXI_ARST_r;
+  reg M_AXI_ARST_rr;
+  reg M_AXI_ARST;
+
+  always @(posedge M_AXI_ACLK) begin
+    M_AXI_ARST_r <= !M_AXI_ARESETN;  
+    M_AXI_ARST_rr <= M_AXI_ARST_r;
+    M_AXI_ARST <= M_AXI_ARST_rr;
+  end
+
+  //----------------------------------------------------------------------------
+  // User-logic <-> Syrup Memory
+  //----------------------------------------------------------------------------
+{%- for domain in domains | sort(attribute='name') %}
+{%- for interface in domain.interfaces | sort(attribute='name') %}
+  wire [{{ interface.addrlen -1 }}:0] {{ interface.name }}_syrup_addr;
+  wire {{ interface.name }}_syrup_re;
+  wire [{{ interface.datawidth -1 }}:0] {{ interface.name }}_syrup_q;
+  wire {{ interface.name }}_syrup_we;
+  wire [{{ interface.datawidth -1 }}:0] {{ interface.name }}_syrup_d;
+  wire [{{ int(interface.datawidth/8) -1 }}:0] {{ interface.name }}_syrup_be;
+{% endfor %}
+{% endfor %}
+
+  //----------------------------------------------------------------------------
+  // User-logic <-> Syrup Channel
+  //----------------------------------------------------------------------------
+{%- for domain in domains | sort(attribute='name') %}
+{%- for outchannel in domain.outchannels | sort(attribute='name') %}
+  wire [{{ outchannel.datawidth -1 }}:0] {{ outchannel.name }}_syrup_d;
+  wire {{ outchannel.name }}_syrup_we;
+{%- endfor %}
+{%- for inchannel in domain.inchannels | sort(attribute='name') %}
+  wire [{{ inchannel.datawidth -1 }}:0] {{ inchannel.name }}_syrup_q;
+  wire {{ inchannel.name }}_syrup_re;
+{%- endfor %}
+{% endfor %}
+
+  //----------------------------------------------------------------------------
+  // Drive 
+  //----------------------------------------------------------------------------
+{%- for domain in domains | sort(attribute='name') %}
+  wire {{ domain.name }}_memory_drive_out;
+  wire {{ domain.name }}_channel_drive_out;
+{% endfor %}
+  wire {{ drive }};
+
+  //----------------------------------------------------------------------------
+  // Syrup <-> AXI Interface
+  //----------------------------------------------------------------------------
+  wire [{{ ext_addrwidth -1 }}:0] MEM_ADDR;
+  wire MEM_WE;
+  wire MEM_RE;
+  wire [{{ ext_datawidth -1 }}:0] MEM_D;
+  wire [{{ ext_datawidth -1 }}:0] MEM_Q;
+  wire                            MEM_RDY;
+
+  //----------------------------------------------------------------------------
+  // User Logic
+  //----------------------------------------------------------------------------
+  {{ userlogic_name }}
+  inst_{{ userlogic_name }}
+    (
+{%- for domain in domains | sort(attribute='name') %}
+{%- for interface in domain.interfaces | sort(attribute='name') %}
+     .{{ interface.name }}_syrup_addr({{ interface.name }}_syrup_addr), 
+     .{{ interface.name }}_syrup_re({{ interface.name }}_syrup_re),
+     .{{ interface.name }}_syrup_q({{ interface.name }}_syrup_q), 
+     .{{ interface.name }}_syrup_we({{ interface.name }}_syrup_we), 
+     .{{ interface.name }}_syrup_d({{ interface.name }}_syrup_d), 
+     .{{ interface.name }}_syrup_be({{ interface.name }}_syrup_be),
+{%- endfor %}
+{%- endfor %}
+
+{%- for domain in domains | sort(attribute='name') %}
+{%- for outchannel in domain.outchannels | sort(attribute='name') %}
+     .{{ outchannel.name }}_syrup_d({{ outchannel.name }}_syrup_d),
+     .{{ outchannel.name }}_syrup_we({{ outchannel.name }}_syrup_we),
+{%- endfor %}
+{%- for inchannel in domain.inchannels | sort(attribute='name') %}
+     .{{ inchannel.name }}_syrup_q({{ inchannel.name }}_syrup_q),
+     .{{ inchannel.name }}_syrup_re({{ inchannel.name }}_syrup_re),
+{%- endfor %}
+{%- endfor %}
+
+{%- for ioport in name_top_ioports | sort() %}
+     .{{ ioport }}({{ ioport }}),
+{%- endfor %}
+
+     .CLK(UCLK), 
+     .RST(URST),
+     .{{ drive }}({{ drive }})
+     );
+
+  //------------------------------------------------------------------------------
+  // Syrup Cache Memory
+  //------------------------------------------------------------------------------
+  SYRUP_MEMORYSYSTEM #
+   (
+    .WITH_CHANNEL(1),
+    .ASYNC({%- if single_clock -%} 0 {%- else -%} 1 {%- endif -%})
+    )
+  inst_syrup_memorysystem
+   (
+    // User-logic
+{%- for domain in domains | sort(attribute='name') %}
+{%- for interface in domain.interfaces | sort(attribute='name') %}
+    .{{ interface.name }}_ADDR({{ interface.name }}_syrup_addr), 
+    .{{ interface.name }}_RE({{ interface.name }}_syrup_re), 
+    .{{ interface.name }}_Q({{ interface.name }}_syrup_q), 
+    .{{ interface.name }}_WE({{ interface.name }}_syrup_we), 
+    .{{ interface.name }}_D({{ interface.name }}_syrup_d), 
+{%- if interface.mask %}
+    .{{ interface.name }}_MASK({{ interface.name }}_syrup_be), 
+{%- endif %}
+{%- endfor %}
+{%- endfor %}
+
+    // Performance Counter
+{%- for domain in domains | sort(attribute='name') %}
+{%- for space in domain.spaces | sort() %}
+    .{{ domain.name }}_{{ space }}_cycle_idle({{ domain.name }}_{{ space }}_cycle_idle), 
+    .{{ domain.name }}_{{ space }}_cycle_hit({{ domain.name }}_{{ space }}_cycle_hit), 
+    .{{ domain.name }}_{{ space }}_cycle_miss({{ domain.name }}_{{ space }}_cycle_miss), 
+    .{{ domain.name }}_{{ space }}_cycle_conflict({{ domain.name }}_{{ space }}_cycle_conflict), 
+    .{{ domain.name }}_{{ space }}_cycle_wait({{ domain.name }}_{{ space }}_cycle_wait), 
+    .{{ domain.name }}_{{ space }}_num_miss({{ domain.name }}_{{ space }}_num_miss), 
+{%- endfor %}
+{%- endfor %}
+    .reset_performance_count(reset_performance_count),
+
+{%- for domain in domains | sort(attribute='name') %}
+    // Drive Signal
+    .{{ domain.name }}_slave_drive_in({{ domain.name }}_channel_drive_out),
+    .{{ domain.name }}_slave_drive_out({{ domain.name }}_memory_drive_out),
+    .{{ domain.name }}_master_drive_in(1'b1),
+    .{{ domain.name }}_master_drive_out(),
+    .{{ domain.name }}_DRIVE({{ drive }}), // supported only single domain 
+{%- endfor %}
+
+    // External Memory Port
+    .MEM_ADDR(MEM_ADDR),
+    .MEM_RE(MEM_RE),
+    .MEM_WE(MEM_WE),
+    .MEM_D(MEM_D),
+    .MEM_Q(MEM_Q),
+    .MEM_RDY(MEM_RDY),
+
+    .CLK(UCLK),
+    .RST(URST)
+   );
+
+  SYRUP_CHANNELSYSTEM #
+   (
+    .ASYNC({%- if single_clock -%} 0 {%- else -%} 1 {%- endif -%})
+    )
+  inst_syrup_channelsystem
+   (
+{%- for domain in domains %}
+{%- for outchannel in domain.outchannels %}
+    .{{ outchannel.name }}_d({{ outchannel.name }}_syrup_d),
+    .{{ outchannel.name }}_we({{ outchannel.name }}_syrup_we),
+{%- endfor %}
+{%- for inchannel in domain.inchannels %}
+    .{{ inchannel.name }}_q({{ inchannel.name }}_syrup_q),
+    .{{ inchannel.name }}_re({{ inchannel.name }}_syrup_re),
+{%- endfor %}
+{%- for outchannel in domain.outchannels %}
+    .{{ outchannel.name }}_ext_data_out({{ outchannel.name }}_outchannel_data_out),
+    .{{ outchannel.name }}_ext_enq_out({{ outchannel.name }}_outchannel_enq_out),
+    .{{ outchannel.name }}_ext_ready_in({{ outchannel.name }}_outchannel_ready_in),
+{%- endfor %}
+{%- for inchannel in domain.inchannels %}
+    .{{ inchannel.name }}_ext_clk({{ inchannel.name }}_inchannel_clk),
+    .{{ inchannel.name }}_ext_rst({{ inchannel.name }}_inchannel_rst),
+    .{{ inchannel.name }}_ext_data_in({{ inchannel.name }}_inchannel_data_in),
+    .{{ inchannel.name }}_ext_enq_in({{ inchannel.name }}_inchannel_enq_in),
+    .{{ inchannel.name }}_ext_ready_out({{ inchannel.name }}_inchannel_ready_out),
+{%- endfor %}
+    .{{ domain.name }}_slave_drive_in(1'b1),
+    .{{ domain.name }}_slave_drive_out(),
+    .{{ domain.name }}_master_drive_in({{ domain.name }}_memory_drive_out),
+    .{{ domain.name }}_master_drive_out({{ domain.name }}_channel_drive_out),
+    .{{ domain.name }}_DRIVE(),
+{%- endfor %}
+    .CLK(UCLK),
+    .RST(URST)
+    );
+
+  //------------------------------------------------------------------------------
+  // AXI Interface
+  //------------------------------------------------------------------------------
+  axi_master_interface #
+   (
+    .USER_DATA_WIDTH(W_EXT_D),
+    .USER_ADDR_WIDTH(W_EXT_A),
+
+    .C_M_AXI_THREAD_ID_WIDTH(C_M_AXI_THREAD_ID_WIDTH),
+    .C_M_AXI_ADDR_WIDTH(C_M_AXI_ADDR_WIDTH),
+    .C_M_AXI_DATA_WIDTH(C_M_AXI_DATA_WIDTH),
+    .C_M_AXI_AWUSER_WIDTH(C_M_AXI_AWUSER_WIDTH),
+    .C_M_AXI_ARUSER_WIDTH(C_M_AXI_ARUSER_WIDTH),
+    .C_M_AXI_WUSER_WIDTH(C_M_AXI_WUSER_WIDTH),
+    .C_M_AXI_RUSER_WIDTH(C_M_AXI_RUSER_WIDTH),
+    .C_M_AXI_BUSER_WIDTH(C_M_AXI_BUSER_WIDTH),
+    .C_M_AXI_SUPPORTS_WRITE(C_M_AXI_SUPPORTS_WRITE),
+    .C_M_AXI_SUPPORTS_READ(C_M_AXI_SUPPORTS_READ),
+
+    .C_M_AXI_TARGET(C_M_AXI_TARGET)
+   )
+  inst_axi_master_interface
+   (
+    .ACLK(M_AXI_ACLK),
+    .ARESETN(M_AXI_ARESETN),
+
+    .user_addr(MEM_ADDR),
+    .user_read_enable(MEM_RE),
+    .user_read_data(MEM_Q),
+    .user_write_enable(MEM_WE),
+    .user_write_data(MEM_D),
+    .user_ready(MEM_RDY),
+
+    .M_AXI_AWID(M_AXI_AWID),
+    .M_AXI_AWADDR(M_AXI_AWADDR),
+    .M_AXI_AWLEN(M_AXI_AWLEN),
+    .M_AXI_AWSIZE(M_AXI_AWSIZE),
+    .M_AXI_AWBURST(M_AXI_AWBURST),
+    .M_AXI_AWLOCK(M_AXI_AWLOCK),
+    .M_AXI_AWCACHE(M_AXI_AWCACHE),
+    .M_AXI_AWPROT(M_AXI_AWPROT),
+    .M_AXI_AWQOS(M_AXI_AWQOS),
+    .M_AXI_AWUSER(M_AXI_AWUSER),
+    .M_AXI_AWVALID(M_AXI_AWVALID),
+    .M_AXI_AWREADY(M_AXI_AWREADY),
+
+    .M_AXI_WDATA(M_AXI_WDATA),
+    .M_AXI_WSTRB(M_AXI_WSTRB),
+    .M_AXI_WLAST(M_AXI_WLAST),
+    .M_AXI_WUSER(M_AXI_WUSER),
+    .M_AXI_WVALID(M_AXI_WVALID),
+    .M_AXI_WREADY(M_AXI_WREADY),
+
+    .M_AXI_BID(M_AXI_BID),
+    .M_AXI_BRESP(M_AXI_BRESP),
+    .M_AXI_BUSER(M_AXI_BUSER),
+    .M_AXI_BVALID(M_AXI_BVALID),
+    .M_AXI_BREADY(M_AXI_BREADY),
+
+    .M_AXI_ARID(M_AXI_ARID),
+    .M_AXI_ARADDR(M_AXI_ARADDR),
+    .M_AXI_ARLEN(M_AXI_ARLEN),
+    .M_AXI_ARSIZE(M_AXI_ARSIZE),
+    .M_AXI_ARBURST(M_AXI_ARBURST),
+    .M_AXI_ARLOCK(M_AXI_ARLOCK),
+    .M_AXI_ARCACHE(M_AXI_ARCACHE),
+    .M_AXI_ARPROT(M_AXI_ARPROT),
+    .M_AXI_ARQOS(M_AXI_ARQOS),
+    .M_AXI_ARUSER(M_AXI_ARUSER),
+    .M_AXI_ARVALID(M_AXI_ARVALID),
+    .M_AXI_ARREADY(M_AXI_ARREADY),
+
+    .M_AXI_RID(M_AXI_RID),
+    .M_AXI_RDATA(M_AXI_RDATA),
+    .M_AXI_RRESP(M_AXI_RRESP),
+    .M_AXI_RLAST(M_AXI_RLAST),
+    .M_AXI_RUSER(M_AXI_RUSER),
+    .M_AXI_RVALID(M_AXI_RVALID),
+    .M_AXI_RREADY(M_AXI_RREADY)
+   );
+
+endmodule
+

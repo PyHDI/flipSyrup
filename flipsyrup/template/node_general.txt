@@ -1,0 +1,270 @@
+//`define ENABLE_PERFORMANCECOUNTER
+
+module syrup_{{ userlogic_name.lower() }} #
+  (
+   //---------------------------------------------------------------------------
+   // User-defined parameter in Top-level User logic
+   // DO NOT modify. They are NOT passed through to the instance
+   //---------------------------------------------------------------------------
+{%- for param in def_top_parameters %}
+   {{ param }}
+{%- endfor %}
+
+   //---------------------------------------------------------------------------
+   // parameters
+   //---------------------------------------------------------------------------
+   parameter W_EXT_D = {{ ext_datawidth }},
+   parameter W_EXT_A = {{ ext_addrwidth }},
+   parameter W_BLEN = {{ ext_burstlen_width }},
+   parameter MAX_BURST_LEN = {{ ext_burstlength }}
+   )
+  (
+   //---------------------------------------------------------------------------
+   // External Memory Port
+   //---------------------------------------------------------------------------
+   output wire [{{ ext_addrwidth -1 }}:0] MEM_ADDR,
+   output wire MEM_WE,
+   output wire MEM_RE,
+   output wire [{{ ext_datawidth -1 }}:0] MEM_D,
+   input  wire [{{ ext_datawidth -1 }}:0] MEM_Q,
+   input  wire                            MEM_RDY,
+
+   //---------------------------------------------------------------------------
+   // Performance Counter
+   //---------------------------------------------------------------------------
+{%- for domain in domains | sort(attribute='name') %}
+{%- for space in domain.spaces | sort() %}
+   output wire [63:0] {{ domain.name }}_{{ space }}_cycle_idle,
+   output wire [63:0] {{ domain.name }}_{{ space }}_cycle_hit,
+   output wire [63:0] {{ domain.name }}_{{ space }}_cycle_miss,
+   output wire [63:0] {{ domain.name }}_{{ space }}_cycle_conflict,
+   output wire [63:0] {{ domain.name }}_{{ space }}_cycle_wait,
+   output wire [63:0] {{ domain.name }}_{{ space }}_num_miss,
+{%- endfor %}
+{%- endfor %}
+
+   input  wire reset_performance_count,
+
+   //---------------------------------------------------------------------------
+   // Syrup Channel
+   //---------------------------------------------------------------------------
+{%- for domain in domains | sort(attribute='name') %}
+{%- for outchannel in domain.outchannels | sort(attribute='name') %}
+   output wire [{{ outchannel.datawidth -1 }}:0] {{ outchannel.name }}_outchannel_data_out,
+   output wire {{ outchannel.name }}_outchannel_enq_out,
+   input wire {{ outchannel.name }}_outchannel_ready_in,
+{%- endfor %}
+{%- for inchannel in domain.inchannels | sort(attribute='name') %}
+   input wire {{ inchannel.name }}_inchannel_clk,
+   input wire {{ inchannel.name }}_inchannel_rst,
+   input wire [{{ inchannel.datawidth -1 }}:0] {{ inchannel.name }}_inchannel_data_in,
+   input wire {{ inchannel.name }}_inchannel_enq_in,
+   output wire {{ inchannel.name }}_inchannel_ready_out,
+{%- endfor %}
+{%- endfor %}
+
+   //---------------------------------------------------------------------------
+   // User-defined I/O ports in Top-level User logic
+   //---------------------------------------------------------------------------
+{%- for ioport in def_top_ioports | sort() %}
+   {{ ioport }},
+{%- endfor %}
+
+   //----------------------------------------------------------------------------
+   // User-logic Clock and Reset
+   //----------------------------------------------------------------------------
+   input wire UCLK,
+   input wire URESETN
+   );
+
+  //---------------------------------------------------------------------------
+  // User-defined localparam in Top-level User logic
+  //---------------------------------------------------------------------------
+{%- for param in def_top_localparams %}
+  {{ param }}
+{%- endfor %}
+
+  //---------------------------------------------------------------------------
+  // User Reset
+  //---------------------------------------------------------------------------
+  reg URST_r;
+  reg URST_rr;
+  reg URST;
+
+  always @(posedge UCLK) begin
+    URST_r <= !URESETN;  
+    URST_rr <= URST_r;
+    URST <= URST_rr;
+  end
+
+  //----------------------------------------------------------------------------
+  // User-logic <-> Syrup Memory
+  //----------------------------------------------------------------------------
+{%- for domain in domains | sort(attribute='name') %}
+{%- for interface in domain.interfaces | sort(attribute='name') %}
+  wire [{{ interface.addrlen -1 }}:0] {{ interface.name }}_syrup_addr;
+  wire {{ interface.name }}_syrup_re;
+  wire [{{ interface.datawidth -1 }}:0] {{ interface.name }}_syrup_q;
+  wire {{ interface.name }}_syrup_we;
+  wire [{{ interface.datawidth -1 }}:0] {{ interface.name }}_syrup_d;
+  wire [{{ int(interface.datawidth/8) -1 }}:0] {{ interface.name }}_syrup_be;
+{% endfor %}
+{% endfor %}
+
+  //----------------------------------------------------------------------------
+  // User-logic <-> Syrup Channel
+  //----------------------------------------------------------------------------
+{%- for domain in domains | sort(attribute='name') %}
+{%- for outchannel in domain.outchannels | sort(attribute='name') %}
+  wire [{{ outchannel.datawidth -1 }}:0] {{ outchannel.name }}_syrup_d;
+  wire {{ outchannel.name }}_syrup_we;
+{%- endfor %}
+{%- for inchannel in domain.inchannels | sort(attribute='name') %}
+  wire [{{ inchannel.datawidth -1 }}:0] {{ inchannel.name }}_syrup_q;
+  wire {{ inchannel.name }}_syrup_re;
+{%- endfor %}
+{% endfor %}
+
+  //----------------------------------------------------------------------------
+  // Drive 
+  //----------------------------------------------------------------------------
+{%- for domain in domains | sort(attribute='name') %}
+  wire {{ domain.name }}_memory_drive_out;
+  wire {{ domain.name }}_channel_drive_out;
+{% endfor %}
+  wire {{ drive }};
+
+  //----------------------------------------------------------------------------
+  // User Logic
+  //----------------------------------------------------------------------------
+  {{ userlogic_name }}
+  inst_{{ userlogic_name }}
+    (
+{%- for domain in domains | sort(attribute='name') %}
+{%- for interface in domain.interfaces | sort(attribute='name') %}
+     .{{ interface.name }}_syrup_addr({{ interface.name }}_syrup_addr), 
+     .{{ interface.name }}_syrup_re({{ interface.name }}_syrup_re),
+     .{{ interface.name }}_syrup_q({{ interface.name }}_syrup_q), 
+     .{{ interface.name }}_syrup_we({{ interface.name }}_syrup_we), 
+     .{{ interface.name }}_syrup_d({{ interface.name }}_syrup_d), 
+     .{{ interface.name }}_syrup_be({{ interface.name }}_syrup_be),
+{%- endfor %}
+{%- endfor %}
+
+{%- for domain in domains | sort(attribute='name') %}
+{%- for outchannel in domain.outchannels | sort(attribute='name') %}
+     .{{ outchannel.name }}_syrup_d({{ outchannel.name }}_syrup_d),
+     .{{ outchannel.name }}_syrup_we({{ outchannel.name }}_syrup_we),
+{%- endfor %}
+{%- for inchannel in domain.inchannels | sort(attribute='name') %}
+     .{{ inchannel.name }}_syrup_q({{ inchannel.name }}_syrup_q),
+     .{{ inchannel.name }}_syrup_re({{ inchannel.name }}_syrup_re),
+{%- endfor %}
+{%- endfor %}
+
+{%- for ioport in name_top_ioports | sort() %}
+     .{{ ioport }}({{ ioport }}),
+{%- endfor %}
+
+     .CLK(UCLK), 
+     .RST(URST),
+     .{{ drive }}({{ drive }})
+     );
+
+  //------------------------------------------------------------------------------
+  // Syrup Cache Memory
+  //------------------------------------------------------------------------------
+  SYRUP_MEMORYSYSTEM #
+   (
+    .WITH_CHANNEL(1),
+    .ASYNC({%- if single_clock -%} 0 {%- else -%} 1 {%- endif -%})
+    )
+  inst_syrup_memorysystem
+   (
+    // User-logic
+{%- for domain in domains | sort(attribute='name') %}
+{%- for interface in domain.interfaces | sort(attribute='name') %}
+    .{{ interface.name }}_ADDR({{ interface.name }}_syrup_addr), 
+    .{{ interface.name }}_RE({{ interface.name }}_syrup_re), 
+    .{{ interface.name }}_Q({{ interface.name }}_syrup_q), 
+    .{{ interface.name }}_WE({{ interface.name }}_syrup_we), 
+    .{{ interface.name }}_D({{ interface.name }}_syrup_d), 
+{%- if interface.mask %}
+    .{{ interface.name }}_MASK({{ interface.name }}_syrup_be), 
+{%- endif %}
+{%- endfor %}
+{%- endfor %}
+
+    // Performance Counter
+{%- for domain in domains | sort(attribute='name') %}
+{%- for space in domain.spaces | sort() %}
+    .{{ domain.name }}_{{ space }}_cycle_idle({{ domain.name }}_{{ space }}_cycle_idle), 
+    .{{ domain.name }}_{{ space }}_cycle_hit({{ domain.name }}_{{ space }}_cycle_hit), 
+    .{{ domain.name }}_{{ space }}_cycle_miss({{ domain.name }}_{{ space }}_cycle_miss), 
+    .{{ domain.name }}_{{ space }}_cycle_conflict({{ domain.name }}_{{ space }}_cycle_conflict), 
+    .{{ domain.name }}_{{ space }}_cycle_wait({{ domain.name }}_{{ space }}_cycle_wait), 
+    .{{ domain.name }}_{{ space }}_num_miss({{ domain.name }}_{{ space }}_num_miss), 
+{%- endfor %}
+{%- endfor %}
+    .reset_performance_count(reset_performance_count),
+
+{%- for domain in domains | sort(attribute='name') %}
+    // Drive Signal
+    .{{ domain.name }}_slave_drive_in({{ domain.name }}_channel_drive_out),
+    .{{ domain.name }}_slave_drive_out({{ domain.name }}_memory_drive_out),
+    .{{ domain.name }}_master_drive_in(1'b1),
+    .{{ domain.name }}_master_drive_out(),
+    .{{ domain.name }}_DRIVE({{ drive }}), // supported only single domain 
+{%- endfor %}
+
+    // External Memory Port
+    .MEM_ADDR(MEM_ADDR),
+    .MEM_RE(MEM_RE),
+    .MEM_WE(MEM_WE),
+    .MEM_D(MEM_D),
+    .MEM_Q(MEM_Q),
+    .MEM_RDY(MEM_RDY),
+
+    .CLK(UCLK),
+    .RST(URST)
+   );
+
+  SYRUP_CHANNELSYSTEM #
+   (
+    .ASYNC({%- if single_clock -%} 0 {%- else -%} 1 {%- endif -%})
+    )
+  inst_syrup_channelsystem
+   (
+{%- for domain in domains %}
+{%- for outchannel in domain.outchannels %}
+    .{{ outchannel.name }}_d({{ outchannel.name }}_syrup_d),
+    .{{ outchannel.name }}_we({{ outchannel.name }}_syrup_we),
+{%- endfor %}
+{%- for inchannel in domain.inchannels %}
+    .{{ inchannel.name }}_q({{ inchannel.name }}_syrup_q),
+    .{{ inchannel.name }}_re({{ inchannel.name }}_syrup_re),
+{%- endfor %}
+{%- for outchannel in domain.outchannels %}
+    .{{ outchannel.name }}_ext_data_out({{ outchannel.name }}_outchannel_data_out),
+    .{{ outchannel.name }}_ext_enq_out({{ outchannel.name }}_outchannel_enq_out),
+    .{{ outchannel.name }}_ext_ready_in({{ outchannel.name }}_outchannel_ready_in),
+{%- endfor %}
+{%- for inchannel in domain.inchannels %}
+    .{{ inchannel.name }}_ext_clk({{ inchannel.name }}_inchannel_clk),
+    .{{ inchannel.name }}_ext_rst({{ inchannel.name }}_inchannel_rst),
+    .{{ inchannel.name }}_ext_data_in({{ inchannel.name }}_inchannel_data_in),
+    .{{ inchannel.name }}_ext_enq_in({{ inchannel.name }}_inchannel_enq_in),
+    .{{ inchannel.name }}_ext_ready_out({{ inchannel.name }}_inchannel_ready_out),
+{%- endfor %}
+    .{{ domain.name }}_slave_drive_in(1'b1),
+    .{{ domain.name }}_slave_drive_out(),
+    .{{ domain.name }}_master_drive_in({{ domain.name }}_memory_drive_out),
+    .{{ domain.name }}_master_drive_out({{ domain.name }}_channel_drive_out),
+    .{{ domain.name }}_DRIVE(),
+{%- endfor %}
+    .CLK(UCLK),
+    .RST(URST)
+    );
+
+endmodule
+
