@@ -167,3 +167,11 @@ Publication
 
 - Shinya Takamaeda-Yamazaki and Kenji Kise: flipSyrup: Cycle-Accurate Hardware Simulation Framework on Abstract FPGA Platforms, 24th International Conference on Field Programmable Logic and Applications (FPL 2014) (Poster), September 2014.
 
+
+Related Project
+==============================
+
+[Pyverilog](http://shtaxxx.github.io/Pyverilog/)
+- Python-based Hardware Design Processing Toolkit for Verilog HDL
+- Used as basic code analyser and generator
+
