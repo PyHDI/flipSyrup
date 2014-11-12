@@ -24,3 +24,7 @@ clean:
 	make clean -C flipsyrup
 	make clean -C input
 	rm -rf *.pyc __pycache__ flipsyrup.egg-info build dist
+
+.PHONY: release
+release:
+	pandoc README.md -t rst > README.rst
