@@ -3,8 +3,8 @@ PYTHON=python3
 
 CONVERTER=rtl_converter.py
 
-INCLUDE=-I ../include/
-SRCS=../input/tests/singleport/userlogic.v
+INCLUDE=-I ../../include/
+SRCS=../../input/test/singleport/userlogic.v
 TOPMODULE=userlogic
 
 OUT=out.v

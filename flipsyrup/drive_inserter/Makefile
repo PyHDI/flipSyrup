@@ -3,9 +3,8 @@ PYTHON=python3
 
 INSERTER=drive_inserter.py
 
-INCLUDE=-I ../include/
-#SRCS=../input/tests/singleport/userlogic.v
-SRCS=../input/tests/userdrive/userlogic.v
+INCLUDE=-I ../../include/
+SRCS=../../input/test/singleport/userlogic.v
 
 OUT=out.v
 
