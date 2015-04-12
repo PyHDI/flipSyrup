@@ -207,14 +207,22 @@ Description
 Publication
 ===========
 
+-  Shinya Takamaeda-Yamazaki and Kenji Kise: A Framework for Efficient
+   Rapid Prototyping by Virtually Enlarging FPGA Resources, 2014
+   International Conference on ReConFigurable Computing and FPGAs
+   (ReConFig 2014), December 2014.
+   `Paper <http://ieeexplore.ieee.org/xpl/articleDetails.jsp?tp=&arnumber=7032488>`__
+   `Slide <http://www.slideshare.net/shtaxxx/20141208reconfigflipsyrup>`__
+
 -  Shinya Takamaeda-Yamazaki and Kenji Kise: flipSyrup: Cycle-Accurate
    Hardware Simulation Framework on Abstract FPGA Platforms, 24th
    International Conference on Field Programmable Logic and Applications
    (FPL 2014) (Poster), September 2014.
+   `Paper <http://ieeexplore.ieee.org/xpl/articleDetails.jsp?tp=&arnumber=6927436>`__
 
 Related Project
 ===============
 
 `Pyverilog <http://shtaxxx.github.io/Pyverilog/>`__ - Python-based
 Hardware Design Processing Toolkit for Verilog HDL - Used as basic code
-analyser and generator
+analyser and generator in PyCoRAM
