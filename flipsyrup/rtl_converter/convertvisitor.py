@@ -333,7 +333,7 @@ class InstanceConvertVisitor(SignalVisitor):
         new_portlist = list(instance.portlist)
         if ioport:
             for i, a in enumerate(self.additionalport):
-                new_portlist.append(PortArg(Identifier(copy.deepcopy(a.name)),
+                new_portlist.append(PortArg(copy.deepcopy(a.name),
                                             Identifier(copy.deepcopy(a.name))))
         else:
             for a in self.additionalport:
