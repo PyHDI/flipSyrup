@@ -25,7 +25,7 @@ from pyverilog.dataflow.signalvisitor import SignalVisitor
 # TARGET SETTING BEGIN
 #-------------------------------------------------------------------------------
 TARGET_PREFIX = 'Syrup'
-TARGET_NAME = 'ID' # instance_name if this_value is None else param_dict[this_value]
+TARGET_NAMES = ('ID',) # instance_name if this_value is None else param_dict[this_value]
 TARGET_PARAMS = { # param_name : default_value
     'DOMAIN' : "undefined",
     'ID' : 0,
@@ -327,9 +327,11 @@ class InstanceConvertVisitor(SignalVisitor):
 
     #----------------------------------------------------------------------------
     def updateInstancePort(self, node, generate=False):
-        instance = copy.deepcopy(node)
-        ioport = not (len(node.portlist) == 0 or 
-                      node.portlist[0].portname is None)
+        new_node = copy.deepcopy(node)
+        instance = new_node.instances[0]
+        
+        ioport = not (len(instance.portlist) == 0 or 
+                      instance.portlist[0].portname is None)
         new_portlist = list(instance.portlist)
         if ioport:
             for i, a in enumerate(self.additionalport):
@@ -342,7 +344,7 @@ class InstanceConvertVisitor(SignalVisitor):
 
         if generate:
             blockstatement = []
-            blockstatement.append(instance)
+            blockstatement.append(new_node)
             block = Block( tuple(blockstatement) )
 
             genconds = self.frames.getGenerateConditions()
@@ -368,7 +370,7 @@ class InstanceConvertVisitor(SignalVisitor):
             ret = IfStatement(cond, block, None)
             self.appendInstance(node, ret)
         else:
-            ret = instance
+            ret = new_node
             self.appendInstance(node, ret)
 
         module = self.getModuleDefinition(node.module)
@@ -411,7 +413,7 @@ class InstanceConvertVisitor(SignalVisitor):
                 param_opt_dict[name] = defvalue
 
         nameprefix = None
-        if TARGET_NAME:
+        if TARGET_NAMES:
             modeprefix = 'none'
             m = re.match( '^(.*)([0-9]+P)$', mode)
             if m:
@@ -419,14 +421,17 @@ class InstanceConvertVisitor(SignalVisitor):
             else:
                 modeprefix = mode
                 
-            nameprefix = ''.join( (modeprefix.lower(), '_', str(param_opt_dict[TARGET_NAME])) )
+            nameprefix = ''.join([ modeprefix.lower(), '_' ] + [ str(param_opt_dict[i]) + '_' for i in TARGET_NAMES ])[:-1]
         else:
             nameprefix = self.getRenamedTargetName(node.name)
 
         self.addTargetObject(mode, nameprefix, param_opt_dict)
 
-        instance = copy.deepcopy(node)
-        noportname = True if len(instance.portlist) == 0 or instance.portlist[0].portname is None else False
+        new_node = copy.deepcopy(node)
+        instance = new_node.instances[0]
+        
+        noportname = (len(instance.portlist) == 0 or
+                      instance.portlist[0].portname is None)
         new_portlist = list(instance.portlist)
         idreplace = IdentifierReplaceVisitor(param_dict)
 
@@ -443,7 +448,7 @@ class InstanceConvertVisitor(SignalVisitor):
 
         if generate:
             blockstatement = []
-            blockstatement.append(instance)
+            blockstatement.append(new_node)
             block = Block( tuple(blockstatement) )
 
             genconds = self.frames.getGenerateConditions()
@@ -469,7 +474,7 @@ class InstanceConvertVisitor(SignalVisitor):
             ret = IfStatement(cond, block, None)
             self.appendInstance(node, ret)
         else:
-            ret = instance
+            ret = new_node
             self.appendInstance(node, ret)
 
     #----------------------------------------------------------------------------
@@ -494,38 +499,13 @@ class InstanceConvertVisitor(SignalVisitor):
         self.generic_visit(new_node)
 
     #----------------------------------------------------------------------------
-    def visit_Instance(self, node):
+    def visit_InstanceList(self, node):
+        if len(node.instances) > 1: return
+        
         m = re.match('('+TARGET_PREFIX+'.*)', node.module)
         if not m: # normal instance
-            if self.isUsed(node.module):
-                tmp = self.additionalport
-                self.additionalport = []
-                new_module = self.rename(node.module)
-                self.copyModuleInfo(node.module, new_module)
-                prev_module_name = node.module
-                node.module = new_module
-                self.changeModuleName(node.module, node.module)
-                SignalVisitor.visit_Instance(self, node)
-                if self.additionalport:
-                    self.setUsed(node.module)
-                    self.updateInstancePort(node, generate=self.frames.isGenerate())
-                    tmp.extend(self.additionalport)
-                self.additionalport = tmp
-                node.module = prev_module_name
-                self.changeModuleName(node.module, prev_module_name)
-
-            else:
-                tmp = self.additionalport
-                self.additionalport = []
-                self.copyModuleInfo(node.module, node.module)
-                SignalVisitor.visit_Instance(self, node)
-                if self.additionalport:
-                    self.setUsed(node.module)
-                    self.updateInstancePort(node, generate=self.frames.isGenerate())
-                    tmp.extend(self.additionalport)
-                self.additionalport = tmp
-            return
-
+            return self._visit_InstanceList_normal(node)
+            
         mode = m.group(0)
 
         if self.frames.isGenerate():
@@ -537,6 +517,36 @@ class InstanceConvertVisitor(SignalVisitor):
             return
 
         self.convertTargetInstance(node, mode, generate=False)
+
+    #----------------------------------------------------------------------------
+    def _visit_InstanceList_normal(self, node):
+        if self.isUsed(node.module):
+            tmp = self.additionalport
+            self.additionalport = []
+            new_module = self.rename(node.module)
+            self.copyModuleInfo(node.module, new_module)
+            prev_module_name = node.module
+            node.module = new_module
+            self.changeModuleName(node.module, node.module)
+            SignalVisitor.visit_InstanceList(self, node)
+            if self.additionalport:
+                self.setUsed(node.module)
+                self.updateInstancePort(node, generate=self.frames.isGenerate())
+                tmp.extend(self.additionalport)
+            self.additionalport = tmp
+            node.module = prev_module_name
+            self.changeModuleName(node.module, prev_module_name)
+
+        else:
+            tmp = self.additionalport
+            self.additionalport = []
+            self.copyModuleInfo(node.module, node.module)
+            SignalVisitor.visit_InstanceList(self, node)
+            if self.additionalport:
+                self.setUsed(node.module)
+                self.updateInstancePort(node, generate=self.frames.isGenerate())
+                tmp.extend(self.additionalport)
+            self.additionalport = tmp
 
 #-------------------------------------------------------------------------------
 class InstanceReplaceVisitor(ReplaceVisitor):
@@ -582,7 +592,7 @@ class InstanceReplaceVisitor(ReplaceVisitor):
         actualkey = id(key)
         return (actualkey in self.replaced_items)
 
-    def visit_Instance(self, node):
+    def visit_InstanceList(self, node):
         if not self.hasReplacedNode(node):
             return self.generic_visit(node)
         return self.getReplacedNode(node)
