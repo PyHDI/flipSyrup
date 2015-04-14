@@ -59,9 +59,13 @@ Software
 -  The code generator uses Jinja2 template engine.
 -  'pip install jinja2' (for Python 2.x) or 'pip3 install jinja2' (for
    Python 3.x)
+-  Pyverilog (Python-based Verilog HDL Design Processing Toolkit)
 
--  Pyverilog (Python-based Verilog HDL Design Processing Toolkit) is
-   already included in this package.
+   -  Install from pip: 'pip install pyverilog' for Python2.7 or 'pip3
+      install pyverilog' for Python3
+   -  Install from github into this package: 'cd flipSyrup; git clone
+      https://github.com/shtaxxx/Pyverilog.git; cd flipsyrup; ln -s
+      ../Pyverilog/pyverilog'
 
 for RTL simulation
 ~~~~~~~~~~~~~~~~~~
