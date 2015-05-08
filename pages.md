@@ -39,11 +39,12 @@ Software
 
 ### for RTL simulation
 
-* Icarus Verilog or Synopsys VCS
-   - Icarus Verilog is an open-sourced Verilog simulator
-   - VCS is a very fast commercial Verilog simulator
+* Icarus Verilog
+    - Icarus Verilog is an open-sourced Verilog simulator
+* Synopsys VCS (option, if you have) 
+    - VCS is a very fast commercial Verilog simulator
 
-### For synthesis of an FPGA circuit design (bit-file)
+### for bitstream synthesis
 
 * Xilinx Platform Studio (14.6 or later)
 
@@ -162,7 +163,7 @@ Related Project
 
 [Pyverilog](http://shtaxxx.github.io/Pyverilog/)
 - Python-based Hardware Design Processing Toolkit for Verilog HDL
-- Used as basic code analyser and generator in PyCoRAM
+- Used as basic code analyser and generator in flipSyrup
 
 
 License
