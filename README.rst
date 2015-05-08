@@ -63,18 +63,23 @@ Software
 
    -  Install from pip: 'pip install pyverilog' for Python2.7 or 'pip3
       install pyverilog' for Python3
-   -  Install from github into this package: 'cd flipSyrup/Pyverilog ;
-      git submodule init; git submodule update'
+   -  Install from github into this package: 'cd flipSyrup; git clone
+      https://github.com/shtaxxx/Pyverilog.git; cd flipsyrup; ln -s
+      ../Pyverilog/pyverilog'
 
 for RTL simulation
 ~~~~~~~~~~~~~~~~~~
 
--  Icarus Verilog or Synopsys VCS
--  Icarus Verilog is an open-sourced Verilog simulator
--  VCS is a very fast commercial Verilog simulator
+-  Icarus Verilog
 
-For synthesis of an FPGA circuit design (bit-file)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   -  Icarus Verilog is an open-sourced Verilog simulator
+
+-  Synopsys VCS (option, if you have)
+
+   -  VCS is a very fast commercial Verilog simulator
+
+for bitstream synthesis
+~~~~~~~~~~~~~~~~~~~~~~~
 
 -  Xilinx Platform Studio (14.6 or later)
 
@@ -228,4 +233,4 @@ Related Project
 
 `Pyverilog <http://shtaxxx.github.io/Pyverilog/>`__ - Python-based
 Hardware Design Processing Toolkit for Verilog HDL - Used as basic code
-analyser and generator in PyCoRAM
+analyser and generator in flipSyrup
