@@ -15,6 +15,42 @@ Apache License 2.0
 (http://www.apache.org/licenses/LICENSE-2.0)
 
 
+Publication
+==============================
+
+If you use flipSyrup in your research, please cite our paper.
+
+- Shinya Takamaeda-Yamazaki and Kenji Kise: A Framework for Efficient Rapid Prototyping by Virtually Enlarging FPGA Resources, 2014 International Conference on ReConFigurable Computing and FPGAs (ReConFig 2014), December 2014.
+[Paper](http://ieeexplore.ieee.org/xpl/articleDetails.jsp?tp=&arnumber=7032488)
+[Slide](http://www.slideshare.net/shtaxxx/20141208reconfigflipsyrup)
+
+```
+@INPROCEEDINGS{Takamaeda:2014:ReConFig:flipSyrup,
+author={Takamaeda-Yamazaki, Shinya and Kise, Kenji}, 
+booktitle={ReConFigurable Computing and FPGAs (ReConFig), 2014 International Conference on}, 
+title={A framework for efficient rapid prototyping by virtually enlarging FPGA resources}, 
+year={2014}, 
+month={Dec}, 
+pages={1-8}, 
+doi={10.1109/ReConFig.2014.7032488},
+}
+```
+
+- Shinya Takamaeda-Yamazaki and Kenji Kise: flipSyrup: Cycle-Accurate Hardware Simulation Framework on Abstract FPGA Platforms, 24th International Conference on Field Programmable Logic and Applications (FPL 2014) (Poster), September 2014.
+[Paper](http://ieeexplore.ieee.org/xpl/articleDetails.jsp?tp=&arnumber=6927436)
+
+```
+@INPROCEEDINGS{Takamaeda:2014:FPL:flipSyrup,
+author={Takamaeda-Yamazaki, Shinya and Kise, Kenji}, 
+booktitle={Field Programmable Logic and Applications (FPL), 2014 24th International Conference on}, 
+title={flipSyrup: Cycle-accurate hardware simulation framework on abstract FPGA platforms}, 
+year={2014}, 
+month={Sept}, 
+pages={1-4},
+doi={10.1109/FPL.2014.6927436},}
+```
+
+
 What's flipSyrup?
 ==============================
 
@@ -164,21 +200,10 @@ Description
       The code is copied into testbench script.
 
 
-Publication
-==============================
-
-- Shinya Takamaeda-Yamazaki and Kenji Kise: A Framework for Efficient Rapid Prototyping by Virtually Enlarging FPGA Resources, 2014 International Conference on ReConFigurable Computing and FPGAs (ReConFig 2014), December 2014.
-[Paper](http://ieeexplore.ieee.org/xpl/articleDetails.jsp?tp=&arnumber=7032488)
-[Slide](http://www.slideshare.net/shtaxxx/20141208reconfigflipsyrup)
-
-- Shinya Takamaeda-Yamazaki and Kenji Kise: flipSyrup: Cycle-Accurate Hardware Simulation Framework on Abstract FPGA Platforms, 24th International Conference on Field Programmable Logic and Applications (FPL 2014) (Poster), September 2014.
-[Paper](http://ieeexplore.ieee.org/xpl/articleDetails.jsp?tp=&arnumber=6927436)
-
-
 Related Project
 ==============================
 
-[Pyverilog](http://shtaxxx.github.io/Pyverilog/)
+[Pyverilog](https://github.com/shtaxxx/Pyverilog)
 - Python-based Hardware Design Processing Toolkit for Verilog HDL
 - Used as basic code analyser and generator in flipSyrup
 
