@@ -126,8 +126,8 @@ class AbstractMemoryGenerator(object):
                 memoryspace.memtype = 'scratchpad_mux'
             else:
                 #ratio = memoryspace.size / raw_cache_requested
-                ratio = 1 / len(self.memoryspacelist)
-                memoryspace.cache_capacity = (2 ** int(math.floor(math.log(rest_onchipmemory * ratio, 2))))
+                ratio = len(self.memoryspacelist)
+                memoryspace.cache_capacity = (2 ** int(math.floor(math.log(rest_onchipmemory / ratio, 2))))
 
         offset = 0
         for memoryspace in sorted(sorted(self.memoryspacelist, key=lambda x:x.name), key=lambda x:x.size, reverse=True):
