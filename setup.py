@@ -4,7 +4,7 @@ import flipsyrup.utils.version
 import re
 import os
 
-m = re.search(r'(\d+\.\d+\.\d+(-.+)?)', pycoram.utils.version.VERSION)
+m = re.search(r'(\d+\.\d+\.\d+(-.+)?)', flipsyrup.utils.version.VERSION)
 version = m.group(1) if m is not None else '0.0.0'
 
 def read(filename):
