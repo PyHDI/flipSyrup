@@ -6,35 +6,29 @@
 # Copyright (C) 2013, Shinya Takamaeda-Yamazaki
 # License: Apache 2.0
 #-------------------------------------------------------------------------------
+from __future__ import absolute_import
+from __future__ import print_function
 import sys
 import os
-import subprocess
-import copy
 import re
 import collections
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))) )
-
-import utils.version
-
-from configuration_reader.resource_definition import MemorySpaceDefinition
-from configuration_reader.resource_definition import InterfaceDefinition
-from configuration_reader.resource_definition import OutChannelDefinition
-from configuration_reader.resource_definition import InChannelDefinition
-
-if sys.version_info[0] >= 3:
-    from rtl_converter.convertvisitor import InstanceConvertVisitor
-    from rtl_converter.convertvisitor import InstanceReplaceVisitor
-else:
-    from convertvisitor import InstanceConvertVisitor
-    from convertvisitor import InstanceReplaceVisitor
-
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+    
 import pyverilog.utils.signaltype as signaltype
-from pyverilog.utils.scope import ScopeLabel, ScopeChain
 import pyverilog.vparser.ast as vast
+from pyverilog.utils.scope import ScopeLabel, ScopeChain
 from pyverilog.vparser.parser import VerilogCodeParser
 from pyverilog.dataflow.modulevisitor import ModuleVisitor
 from pyverilog.ast_code_generator.codegen import ASTCodeGenerator
+
+from flipsyrup.configuration_reader.resource_definition import MemorySpaceDefinition
+from flipsyrup.configuration_reader.resource_definition import InterfaceDefinition
+from flipsyrup.configuration_reader.resource_definition import OutChannelDefinition
+from flipsyrup.configuration_reader.resource_definition import InChannelDefinition
+
+from flipsyrup.rtl_converter.convertvisitor import InstanceConvertVisitor
+from flipsyrup.rtl_converter.convertvisitor import InstanceReplaceVisitor
 
 TEMPLATE_DIR = os.path.dirname(os.path.abspath(__file__)) + '/template/'
 TEMPLATE_FILE = TEMPLATE_DIR + 'syrup.v'
@@ -219,54 +213,3 @@ class RtlConverter(object):
         self.target_object = instanceconvert_visitor.getTargetObject()
 
         return ret
-
-def main():
-    from optparse import OptionParser
-    INFO = "RTL Converter with Pyverilog"
-    VERSION = utils.version.VERSION
-    USAGE = "Usage: python rtlconverter.py -t TOPMODULE file ..."
-
-    def showVersion():
-        print(INFO)
-        print(VERSION)
-        print(USAGE)
-        sys.exit()
-    
-    optparser = OptionParser()
-    optparser.add_option("-v","--version",action="store_true",dest="showversion",
-                         default=False,help="Show the version")
-    optparser.add_option("-t","--top",dest="topmodule",
-                         default="userlogic",help="Top module, Default=userlogic")
-    optparser.add_option("-o","--output",dest="outputfile",
-                         default="out.v",help="Output file name, Default=out.v")
-    optparser.add_option("-I","--include",dest="include",action="append",
-                         default=[],help="Include path")
-    optparser.add_option("-D",dest="define",action="append",
-                         default=[],help="Macro Definition")
-    (options, args) = optparser.parse_args()
-
-    filelist = args
-    if options.showversion:
-        showVersion()
-
-    for f in filelist:
-        if not os.path.exists(f): raise IOError("file not found: " + f)
-
-    if len(filelist) == 0:
-        showVersion()
-
-    converter = RtlConverter(filelist, options.topmodule,
-                             include=options.include,
-                             define=options.define)
-    ast = converter.generate()
-    converter.dumpTargetObject()
-    
-    asttocode = ASTCodeGenerator()
-    code = asttocode.visit(ast)
-
-    f = open(options.outputfile, 'w')
-    f.write(code)
-    f.close()
-
-if __name__ == '__main__':
-    main()

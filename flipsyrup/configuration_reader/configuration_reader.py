@@ -4,19 +4,14 @@
 # Copyright (C) 2013, Shinya Takamaeda-Yamazaki
 # License: Apache 2.0
 #-------------------------------------------------------------------------------
-
+from __future__ import absolute_import
+from __future__ import print_function
 import os
 import sys
 import re
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))) )
-
-if sys.version_info[0] >= 3:
-    from configuration_reader.resource_definition import OnchipMemoryDefinition
-    from configuration_reader.resource_definition import OffchipMemoryDefinition
-else:
-    from resource_definition import OnchipMemoryDefinition
-    from resource_definition import OffchipMemoryDefinition
+from flipsyrup.configuration_reader.resource_definition import OnchipMemoryDefinition
+from flipsyrup.configuration_reader.resource_definition import OffchipMemoryDefinition
 
 #-------------------------------------------------------------------------------
 # Reading Resource Definitions from an input file

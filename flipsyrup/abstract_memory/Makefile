@@ -1,6 +1,6 @@
 PYTHON=python3
 #OPT=-m pdb
-MAIN=abstract_memory.py
+MAIN=run_abstract_memory.py
 
 INPUT=sample.config
 OUTPUT=out.v

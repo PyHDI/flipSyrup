@@ -4,22 +4,15 @@
 # Copyright (C) 2013, Shinya Takamaeda-Yamazaki
 # License: Apache 2.0
 #-------------------------------------------------------------------------------
-
+from __future__ import absolute_import
+from __future__ import print_function
 import sys
 import os
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))) )
-
-if sys.version_info[0] >= 3:
-    from configuration_reader.resource_definition import DomainDefinition
-    from configuration_reader.resource_definition import InterfaceDefinition
-    from configuration_reader.resource_definition import OutChannelDefinition
-    from configuration_reader.resource_definition import InChannelDefinition
-else:
-    from resource_definition import DomainDefinition
-    from resource_definition import InterfaceDefinition
-    from resource_definition import OutChannelDefinition
-    from resource_definition import InChannelDefinition
+from flipsyrup.configuration_reader.resource_definition import DomainDefinition
+from flipsyrup.configuration_reader.resource_definition import InterfaceDefinition
+from flipsyrup.configuration_reader.resource_definition import OutChannelDefinition
+from flipsyrup.configuration_reader.resource_definition import InChannelDefinition
 
 def get_domains(interfacelist, outchannellist, inchannellist):
     domaindict = {}
@@ -41,4 +34,3 @@ def get_domains(interfacelist, outchannellist, inchannellist):
 
     domainlist = list( domaindict.values() )
     return domainlist
-

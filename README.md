@@ -64,85 +64,65 @@ You can implement a cycle-accurate prototyping system on both situations.
 
 flipSyrup employs two resources abstractions that an FPGA platform has.
 
-* Syrup Memory
+- Syrup Memory
     - Memory system abstraction.
     - Prototyping target logic can use this abstract memory as an ideal single-cycle memory.
     - flipSyrup compiler automatically synthesizes a cache-based memory system to simulate cycle-accurately the taget behavior.
-* Syrup Channel
+- Syrup Channel
     - Inter-FPGA interconnection abstraction for multi-FPGA platform based prototyping.
     - Prototyping target logic can use this abstrct channel as a register to be connected to its neighbor FPGA.
     - flipSyrup compiler automatically synthesizes a FIFO-based synchronizatoin system to communicate with neighbor FPGAs.
 
 
-Requirements
-==============================
-
-Software
-------------------------------
-
-* Python (2.7 or later, 3.3 or later)
-* Icarus Verilog (0.9.6 or later)
-   - 'iverilog -E' command is used for the preprocessor.
-* Jinja2 (2.7 or later)
-   - The code generator uses Jinja2 template engine.
-   - 'pip install jinja2' (for Python 2.x) or 'pip3 install jinja2' (for Python 3.x)
-* Pyverilog (Python-based Verilog HDL Design Processing Toolkit)
-    - Install from pip: 'pip install pyverilog' for Python2.7 or 'pip3 install pyverilog' for Python3
-    - Install from github into this package: 'cd flipSyrup; git clone https://github.com/shtaxxx/Pyverilog.git; cd flipsyrup; ln -s ../Pyverilog/pyverilog'
-
-### for RTL simulation
-
-* Icarus Verilog
-    - Icarus Verilog is an open-sourced Verilog simulator
-* Synopsys VCS (option, if you have) 
-    - VCS is a very fast commercial Verilog simulator
-
-### for bitstream synthesis
-
-* Xilinx Platform Studio (14.6 or later)
-
-(Recommended) FPGA Board
-------------------------------
-
-### Single FPGA Platform
-
-* Digilent Atlys (Spartan-6)
-* Xilinx ML605 (Virtex-6)
-* Xilinx VC707 (Virtex-7)
-
-### Multi-FPGA Platform
-
-* ScalableCore System (Spartan-6)
-
-
 Installation
 ==============================
 
-If you want to use flipSyrup as a general library, you can install on your environment by using setup.py.
+Requirements
+--------------------
 
-If Python 2.7 is used,
+- Python: 2.7, 3.4 or later
+
+Python3 is recommended.
+
+- Icarus Verilog: 0.9.7 or later
+
+Install on your platform. For exmple, on Ubuntu:
+
+    sudo apt-get install iverilog
+
+- Jinja2: 2.8 or later
+
+Install on your python environment by using pip:
+
+    pip install jinja2
+
+- Pyverilog: 1.0.4 or later
+
+Install from pip (or download and install from GitHub):
+
+    pip install pyverilog
+
+
+Install
+--------------------
+
+Install Veriloggen:
 
     python setup.py install
-
-If Python 3.x is used,
-
-    python3 setup.py install
-
-Then you can use the flipSyrup command from your console (the version number depends on your environment).
-
-    flipsyrup-0.8.0-py3.4.1
 
 
 Getting Started
 ==============================
 
-First, please make sure TARGET in 'base.mk' in 'input' is correctly defined. If you use the installed pycoram command on your environment, please modify 'TARGET' in base.mk as below (the version number depends on your environment)
+You can use the flipSyrup command from your console.
 
-    TARGET=flipsyrup-0.8.0-py3.4.1
+    flipsyrup
 
-You can find the sample input projects in 'input/tests/singleport'.
+You can find some examples in 'flipSyrup/tests'.
 
-* userlogic.v  : User-defined Verilog code using Syrup memory blocks
+Let's begin flipSyrup by an example in 'tests/singleport'. You will find two source files.
+
+- userlogic.v  : User-defined Verilog code using Syrup memory blocks
 
 Then type 'make' and 'make run' to simulate sample system.
 
@@ -151,23 +131,19 @@ Then type 'make' and 'make run' to simulate sample system.
 
 Or type commands as below directly.
 
-    python flipsyrup/flipsyrup.py input/sample.config -t userlogic -I include/ --usertest=input/tests/singleport/testbench.v input/tests/singleport/userlogic.v 
+    python flipsyrup config/sample.config -t userlogic -I include/ --usertest=tests/singleport/testbench.v tests/singleport/userlogic.v 
     iverilog -I syrup_userlogic_v1_00_a/hdl/verilog/ syrup_userlogic_v1_00_a/test/testbench_userlogic.v 
     ./a.out
 
 flipSyrup compiler generates a directory for IP-core (syrup\_userlogic\_v1\_00\_a, in this example).
 
 'syrup\_userlogic\_v1\_00\_a.v' includes 
-* IP-core RTL design (hdl/verilog/syrup\_userlogic.v)
-* Test bench (test/testbench\_userlogic.v) 
-* XPS setting files (syrup\_userlogic\_v2\_1\_0.{mpd,pao,tcl})
+- IP-core RTL design (hdl/verilog/syrup\_userlogic.v)
+- Test bench (test/testbench\_userlogic.v) 
+- XPS setting files (syrup\_userlogic\_v2\_1\_0.{mpd,pao,tcl})
 
 A bit-stream can be synthesized by using Xilinx Platform Studio.
 Please copy the generated IP-core into 'pcores' directory of XPS project.
-
-
-This software has some sample project in 'input'.
-To build them, please modify 'Makefile', so that the corresponding files and parameters are selected (especially INPUT, MEMIMG and USERTEST)
 
 
 flipSyrup Command Options
@@ -176,7 +152,7 @@ flipSyrup Command Options
 Command
 ------------------------------
 
-    python flipsyrup.py [config] [-t topmodule] [-I includepath]+ [--memimg=filename] [--usertest=filename] [file]+
+    flipsyrup [config] [-t topmodule] [-I includepath]+ [--memimg=filename] [--usertest=filename] [file]+
 
 Description
 ------------------------------
@@ -203,7 +179,5 @@ Description
 Related Project
 ==============================
 
-[Pyverilog](https://github.com/shtaxxx/Pyverilog)
+[Pyverilog](https://github.com/PyHDI/Pyverilog)
 - Python-based Hardware Design Processing Toolkit for Verilog HDL
-- Used as basic code analyser and generator in flipSyrup
-

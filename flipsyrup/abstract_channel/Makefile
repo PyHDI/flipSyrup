@@ -1,6 +1,6 @@
 PYTHON=python3
 #OPT=-m pdb
-MAIN=abstract_channel.py
+MAIN=run_abstract_channel.py
 
 OUTPUT=out.v
 

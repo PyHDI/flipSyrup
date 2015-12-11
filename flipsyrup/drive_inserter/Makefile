@@ -1,10 +1,10 @@
 PYTHON=python3
 #OPT=-m pdb
 
-INSERTER=drive_inserter.py
+INSERTER=run_drive_inserter.py
 
 INCLUDE=-I ../../include/
-SRCS=../../input/test/singleport/userlogic.v
+SRCS=../../tests/singleport/userlogic.v
 
 OUT=out.v
 

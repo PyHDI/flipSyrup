@@ -14,35 +14,27 @@
 # (4) Drive signal insertion
 # (5) Top module synthesis with user-defined RTL
 
+from __future__ import absolute_import
+from __future__ import print_function
 import os
 import sys
 import math
-import re
-import copy
-import shutil
-import glob
 from jinja2 import Environment, FileSystemLoader
-if sys.version_info[0] < 3:
-    import ConfigParser as configparser
-else:
-    import configparser
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)) )
+from flipsyrup.configuration_reader.configuration_reader import readResourceDefinitions
+from flipsyrup.configuration_reader.domain_generator import get_domains
 
-import utils.version
-import configuration_reader.configuration_reader
-import configuration_reader.domain_generator
-from configuration_reader.resource_definition import MemorySpaceDefinition
-from configuration_reader.resource_definition import InterfaceDefinition
-from configuration_reader.resource_definition import OnchipMemoryDefinition
-from configuration_reader.resource_definition import OffchipMemoryDefinition
-from configuration_reader.resource_definition import OutChannelDefinition
-from configuration_reader.resource_definition import InChannelDefinition
+from flipsyrup.configuration_reader.resource_definition import MemorySpaceDefinition
+from flipsyrup.configuration_reader.resource_definition import InterfaceDefinition
+from flipsyrup.configuration_reader.resource_definition import OnchipMemoryDefinition
+from flipsyrup.configuration_reader.resource_definition import OffchipMemoryDefinition
+from flipsyrup.configuration_reader.resource_definition import OutChannelDefinition
+from flipsyrup.configuration_reader.resource_definition import InChannelDefinition
 
-from rtl_converter.rtl_converter import RtlConverter
-from drive_inserter.drive_inserter import DriveInserter
-from abstract_memory.abstract_memory import AbstractMemoryGenerator
-from abstract_channel.abstract_channel import AbstractChannelGenerator
+from flipsyrup.rtl_converter.rtl_converter import RtlConverter
+from flipsyrup.drive_inserter.drive_inserter import DriveInserter
+from flipsyrup.abstract_memory.abstract_memory import AbstractMemoryGenerator
+from flipsyrup.abstract_channel.abstract_channel import AbstractChannelGenerator
 
 import pyverilog.vparser.ast as vast
 from pyverilog.ast_code_generator.codegen import ASTCodeGenerator
@@ -124,7 +116,7 @@ class SyrupBuilder(object):
         top_ioports = converter.getTopIOPorts()
 
         memoryspacelist, interfacelist, outchannellist, inchannellist = converter.getResourceDefinitions()
-        domains = configuration_reader.domain_generator.get_domains(interfacelist, outchannellist, inchannellist)
+        domains = get_domains(interfacelist, outchannellist, inchannellist)
 
         if len(domains) > 1:
             raise ValueError("Using multiple domains is not supported currently.")
@@ -137,7 +129,7 @@ class SyrupBuilder(object):
         userlogic_code = asttocode.visit(drive_ast)
 
         # Syrup memory
-        resourcelist = configuration_reader.configuration_reader.readResourceDefinitions(memory_configs)
+        resourcelist = readResourceDefinitions(memory_configs)
 
         onchipmemorylist = []
         offchipmemorylist = []
@@ -384,120 +376,3 @@ class SyrupBuilder(object):
         f = open(makefilepath+makefilename, 'w')
         f.write(makefile_code)
         f.close()
-
-#-------------------------------------------------------------------------------
-def main():
-    from optparse import OptionParser
-    INFO = "flipSyrup: Cycle-Accurate Hardware Simulation Framework on Abstract FPGA Platforms"
-    VERSION = utils.version.VERSION
-    USAGE = "Usage: python flipsyrup.py [config] [-t topmodule] [-I includepath]+ [--memimg=filename] [--usertest=filename] [file]+"
-
-    def showVersion():
-        print(INFO)
-        print(VERSION)
-        print(USAGE)
-        sys.exit()
-    
-    optparser = OptionParser()
-    optparser.add_option("-v","--version",action="store_true",dest="showversion",
-                         default=False,help="Show the version")
-    optparser.add_option("-t","--top",dest="topmodule",
-                         default="TOP",help="Top module of user logic, Default=userlogic")
-    optparser.add_option("-I","--include",dest="include",action="append",
-                         default=[],help="Include path")
-    optparser.add_option("-D",dest="define",action="append",
-                         default=[],help="Macro Definition")
-    optparser.add_option("--memimg",dest="memimg",
-                         default=None,help="Memory image file, Default=None")
-    optparser.add_option("--usertest",dest="usertest",
-                         default=None,help="User-defined test code file, Default=None")
-    (options, args) = optparser.parse_args()
-
-    filelist = []
-    for arg in args:
-        filelist.extend( glob.glob(os.path.expanduser(arg)) )
-
-    if options.showversion:
-        showVersion()
-
-    for f in filelist:
-        if not os.path.exists(f): raise IOError("file not found: " + f)
-
-    if len(filelist) == 0:
-        showVersion()
-
-    configfile = None
-    userlogic_filelist = []
-    for f in filelist:
-        if f.endswith('.v'):
-            userlogic_filelist.append(f)
-        if f.endswith('.config'):
-            if configfile is not None: raise IOError("Multiple configuration files")
-            configfile = f
-
-    print("Input files")
-    print("  Configuration: %s" % configfile)
-    print("  User-logic: %s" % ', '.join(userlogic_filelist) )
-
-    # default values
-    configs = {
-        'single_clock' : True,
-        'drive' : 'DRIVE',
-        'if_type' : 'axi',
-        'output' : 'out.v',
-        'sim_addrwidth' : 27,
-        'hperiod_ulogic' : 5,
-        'hperiod_cthread' : 5,
-        'hperiod_axi' : 5,
-    }
-
-    confp = configparser.SafeConfigParser()
-    if configfile is not None:
-        confp.read(configfile)
-
-    if not confp.has_section('BRAM'):
-        raise ValueError("BRAM parameters are not defined.")
-    if not confp.has_section('DRAM'):
-        raise ValueError("DRAM parameters are not defined.")
-        
-    memory_configs = {}
-    memory_configs['BRAM'] = {}
-    memory_configs['DRAM'] = {}
-    for k, v in confp.items('BRAM'):
-        memory_configs['BRAM'][k] = v
-    for k, v in confp.items('DRAM'):
-        memory_configs['DRAM'][k] = v
-
-    if confp.has_section('synthesis'):
-        for k, v in confp.items('synthesis'):
-            if k == 'single_clock':
-                configs[k] = False if 'n' in v or 'N' in v else True
-            elif k not in configs:
-                raise ValueError("No such configuration item: %s" % k)
-            else:
-                configs[k] = v
-
-    if confp.has_section('simulation'):
-        for k, v in confp.items('simulation'):
-            if k == 'sim_addrwidth' or k == 'hperiod_ulogic' or k == 'hperiod_cthread' or k == 'hperiod_axi':
-                configs[k] = int(v)
-            elif k not in configs:
-                raise ValueError("No such configuration item: %s" % k)
-            else:
-                configs[k] = v
-
-    if configs['hperiod_ulogic'] != configs['hperiod_axi']:
-        raise ValueError(("Half period values of User-logic and AXI"
-                          " should be same in current implementation"))
-
-    builder = SyrupBuilder()
-    builder.build(configs, memory_configs,
-                  userlogic_filelist, 
-                  options.topmodule, 
-                  include=options.include,
-                  define=options.define,
-                  usertest=options.usertest,
-                  memimg=options.memimg)
-
-if __name__ == '__main__':
-    main()

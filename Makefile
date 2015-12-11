@@ -1,4 +1,4 @@
-TARGET=./input/test/singleport/
+TARGET=./tests/singleport/
 
 .PHONY: all
 all: sim
@@ -22,7 +22,8 @@ view:
 .PHONY: clean
 clean:
 	make clean -C flipsyrup
-	make clean -C input
+	make clean -C ./examples
+	make clean -C ./tests
 	rm -rf *.pyc __pycache__ flipsyrup.egg-info build dist
 
 .PHONY: release

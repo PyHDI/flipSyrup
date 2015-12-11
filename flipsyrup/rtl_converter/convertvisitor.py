@@ -6,18 +6,14 @@
 # Copyright (C) 2013, Shinya Takamaeda-Yamazaki
 # License: Apache 2.0
 #-------------------------------------------------------------------------------
-
+from __future__ import absolute_import
+from __future__ import print_function
 import sys
 import os
 import re
 import copy
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))) )
-
-import pyverilog.utils.util as util
-from pyverilog.utils.scope import ScopeLabel, ScopeChain
 from pyverilog.vparser.ast import *
-import pyverilog.dataflow.dataflow as dataflow
 from pyverilog.dataflow.visit import *
 from pyverilog.dataflow.signalvisitor import SignalVisitor
 

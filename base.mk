@@ -4,9 +4,11 @@ PYTHON=python3
 #OPT=-m cProfile -o profile.rslt
 
 ## If you installed pycoram in your environment (site-packages)
+TARGET=flipsyrup
+
 #TARGET=flipsyrup-0.8.0-py3.4.1
 ## If you directly execute pycoram.py without installation
-TARGET=$(ROOTDIR)/flipsyrup/flipsyrup.py
+LTARGET=$(PYTHON) $(OPT) $(ROOTDIR)/flipsyrup/run_flipsyrup.py
 
 ################################################################################
 IPVER=v1_00_a
@@ -21,7 +23,11 @@ all: sim
 
 .PHONY: build
 build:
-	$(PYTHON) $(OPT) $(TARGET) $(ARGS) $(INPUT) 
+	$(TARGET) $(ARGS) $(INPUT) 
+
+.PHONY: lbuild
+lbuild:
+	$(LTARGET) $(ARGS) $(INPUT) 
 
 .PHONY: sim
 sim:

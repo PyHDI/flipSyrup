@@ -1,2 +1,9 @@
 include README.md
 include README.rst
+include LICENSE.txt
+include Makefile
+include base.mk
+recursive-include include *
+recursive-include config *
+recursive-include examples *
+recursive-include tests *

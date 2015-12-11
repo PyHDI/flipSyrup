@@ -6,11 +6,12 @@
 # Copyright (C) 2013, Shinya Takamaeda-Yamazaki
 # License: Apache 2.0
 #-------------------------------------------------------------------------------
-
+from __future__ import absolute_import
+from __future__ import print_function
 import os
 import sys
-
 import struct
+from optparse import OptionParser
 
 def bin2hex(ifilename, ofilename, size):
     ifile = open(ifilename, 'rb')
@@ -42,7 +43,6 @@ def bin2hex_bank(ifilename, ofilename, size):
         index += 1
 
 if __name__ == '__main__':
-    from optparse import OptionParser
     INFO = "Binary to Verilog HDL memory image in HEX"
     VERSION = "ver.1.0.0"
     USAGE = "Usage: python bin2hex.py filename"

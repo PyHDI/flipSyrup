@@ -7,34 +7,17 @@
 # Copyright (C) 2013, Shinya Takamaeda-Yamazaki
 # License: Apache 2.0
 #-------------------------------------------------------------------------------
-
+from __future__ import absolute_import
+from __future__ import print_function
 import os
 import sys
 import math
 from jinja2 import Environment, FileSystemLoader
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))) )
-
-import utils.version
-
-import configuration_reader.configuration_reader
-
-from configuration_reader.resource_definition import OnchipMemoryDefinition
-from configuration_reader.resource_definition import OffchipMemoryDefinition
-from configuration_reader.resource_definition import MemorySpaceDefinition
-from configuration_reader.resource_definition import InterfaceDefinition
-import configuration_reader.domain_generator
-
-if sys.version_info[0] >= 3:
-    import abstract_memory.system_generator as system_generator
-    import abstract_memory.controller_generator as controller_generator
-    import abstract_memory.counter_generator as counter_generator
-    import abstract_memory.memory_generator as memory_generator
-else:
-    import system_generator as system_generator
-    import controller_generator as controller_generator
-    import counter_generator as counter_generator
-    import memory_generator as memory_generator
+import flipsyrup.abstract_memory.system_generator as system_generator
+import flipsyrup.abstract_memory.controller_generator as controller_generator
+import flipsyrup.abstract_memory.counter_generator as counter_generator
+import flipsyrup.abstract_memory.memory_generator as memory_generator
 
 TEMPLATE_DIR = os.path.dirname(os.path.abspath(__file__)) + '/template/'
 
@@ -267,40 +250,3 @@ class AbstractMemoryGenerator(object):
                                          offchip_addrlen=offchip_addrlen, 
                                          offchip_numports=offchip_numports)
         return rslt
-
-#-------------------------------------------------------------------------------
-# main function
-#-------------------------------------------------------------------------------
-if __name__ == '__main__':
-    from optparse import OptionParser
-    optparser = OptionParser()
-    optparser.add_option("-o","--output",dest="outputfile",
-                         default="out.v",help="Output File name, Default=out.v")
-    (options, args) = optparser.parse_args()
-
-    onchipmemorylist = []
-    offchipmemorylist = []
-    memoryspacelist = []
-    interfacelist = []
-
-    onchipmemorylist.append( OnchipMemoryDefinition('BRAM', 16*1024) )
-    offchipmemorylist.append( OffchipMemoryDefinition('DRAM', 128*1024*1024, 256, 32) )
-    interfacelist.append( InterfaceDefinition('CoreInst0', 'MCore', 'NodeMemory0',
-                                              mode='read', priority=0, mask=False) )
-    interfacelist.append( InterfaceDefinition('CoreData0', 'MCore', 'NodeMemory0',
-                                              mode='readwrite', priority=1, mask=True) )
-    interfacelist.append( InterfaceDefinition('DMARead0', 'MCore', 'NodeMemory0',
-                                              mode='read', priority=2, mask=False) )
-    interfacelist.append( InterfaceDefinition('DMAWrite0', 'MCore', 'NodeMemory0',
-                                              mode='write', priority=3, mask=False) )
-    memoryspacelist.append( MemorySpaceDefinition('NodeMemory0', size=32*1024, datawidth=32, memtype='cache',
-                                                  cache_way=1, cache_linewidth=256) )
-
-    domainlist = configuration_reader.domain_generator.get_domains(interfacelist, (), ())
-    module = AbstractMemoryGenerator(onchipmemorylist, offchipmemorylist, 
-                                     memoryspacelist, interfacelist, domainlist)
-    moduledef = module.create()
-
-    f = open(options.outputfile, 'w')
-    f.write(moduledef)
-    f.close()

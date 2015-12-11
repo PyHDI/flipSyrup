@@ -1,10 +1,10 @@
 PYTHON=python3
 #OPT=-m pdb
 
-CONVERTER=rtl_converter.py
+CONVERTER=run_rtl_converter.py
 
 INCLUDE=-I ../../include/
-SRCS=../../input/test/singleport/userlogic.v
+SRCS=../../tests/singleport/userlogic.v
 TOPMODULE=userlogic
 
 OUT=out.v

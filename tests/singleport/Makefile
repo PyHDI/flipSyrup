@@ -4,7 +4,7 @@ TEST=testbench.v
 USERTEST=--usertest=$(TEST)
 MEM=../mem-incr.hex
 MEMIMG=--memimg=$(MEM)
-ROOTDIR=../../../
-CONFIG=$(ROOTDIR)/input/default.config
+ROOTDIR=../../
+CONFIG=$(ROOTDIR)/config/default.config
 INCLUDE=-I $(ROOTDIR)/include/
-include $(ROOTDIR)/input/base.mk
+include $(ROOTDIR)/base.mk
